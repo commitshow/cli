@@ -1,39 +1,87 @@
-# commit.show CLI
+<h1 align="center">commit.show CLI</h1>
 
-> Audit any vibe-coded project from your terminal — the **walk-on** lane.
+<p align="center">
+  <strong>Audit any vibe-coded project from your terminal.</strong><br>
+  Score · 3-axis breakdown · 3 strengths + 2 concerns · rank · delta — in one command.
+</p>
 
-The official CLI for **[commit.show](https://commit.show)**. A walk-on
-drops in, gets scored, and leaves — no signup, no audition fee, no league
-entry. You get the same Claude-grade analysis used in the full season
-(Audit / Scout / Community breakdown, 3 strengths + 2 concerns, rank,
-delta since the last snapshot). Local runs also save `.commitshow/audit.md`
-so your AI coding agent can read the report in the next turn and iterate.
-
-When a walk-on is ready to enter the season for real — Scout forecasts,
-season ranking, Backstage prompt-extraction, Hall of Fame — they audition
-at <https://commit.show/submit>.
-
-The npm package + command is `commitshow` (no dot — npm doesn't allow it in
-package names). Everything else uses the brand `commit.show`.
+<p align="center">
+  <a href="https://www.npmjs.com/package/commitshow"><img src="https://img.shields.io/npm/v/commitshow?color=F0C040&label=npm&style=flat-square" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/commitshow"><img src="https://img.shields.io/npm/dw/commitshow?color=0F2040&style=flat-square" alt="weekly downloads"></a>
+  <img src="https://img.shields.io/node/v/commitshow?color=0F2040&style=flat-square" alt="node">
+  <img src="https://img.shields.io/npm/l/commitshow?color=0F2040&style=flat-square" alt="MIT license">
+</p>
 
 ```bash
-npx commitshow@latest audit
-# or audit any public project by URL — no cd required
 npx commitshow@latest audit github.com/owner/repo
 ```
+
+```
+  ┌──────────────────────────────────────────────────────────┐
+  │  commit.show · Audit report                               │
+  └──────────────────────────────────────────────────────────┘
+
+    maa-website                     austinpw-cloud/maa-website
+
+                         ╔══════════════╗
+                         ║   82 / 100   ║
+                         ╚══════════════╝
+
+      Audit  42/50  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱
+      Scout  26/30  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱
+      Comm.  14/20  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱
+
+    ┌───────────────────────────────────────────────────────┐
+    │ ↑ 80+ edge functions · LCP 1.4s · 50 RLS policies     │
+    │ ↑ Brief integrity 9/10 · all 6 sections answered      │
+    │ ↑ Tech layers 6 · full-stack evidence                 │
+    │ ↓ Accessibility 72 · buttons missing aria-labels      │
+    │ ↓ No API rate limiting on /auth endpoint              │
+    └───────────────────────────────────────────────────────┘
+
+      Ranked    #3 of 47   Season Zero
+      Tier      Honors     (top 5%)
+      Δ         +12        since yesterday's audit
+
+    → commit.show/projects/bfe11d75-dc67-…
+                                                       commit.show
+```
+
+> [⭐ Star us on GitHub](https://github.com/commitshow/cli) if `commitshow audit` saved you a `// TODO`.
+
+---
+
+## Why
+
+Vibe-coded projects ship fast and break differently. The CLI gives you a
+**zero-config**, **walk-on** lane to commit.show's audit engine — the same
+Claude-grade analysis used in our 3-week leagues, minus the signup, fee,
+and league commitment. You get a snapshot of where the build sits, what's
+strong, what's wobbling, and how it ranks against everyone else this week.
+
+Local runs also drop `.commitshow/audit.md` and `.commitshow/audit.json`
+into your repo, so your AI coding agent can read the report on the next
+turn without a prompt-engineering ritual.
+
+When a project is ready for the full season — Scout forecasts, season
+ranking, Backstage prompt extraction, Hall of Fame — it auditions at
+[commit.show/submit](https://commit.show/submit).
+
+> The npm package + command is `commitshow` (no dot — npm doesn't allow
+> it in package names). Everywhere else uses the brand **commit.show**.
 
 ## Install
 
 ```bash
-# one-shot
+# one-shot (recommended for trying it on someone else's repo)
 npx commitshow@latest audit <target>
 
-# or global
+# or global, if you'll run it daily
 npm i -g commitshow
 commitshow audit <target>
 ```
 
-Node 20+.
+Requires **Node 20+**.
 
 ## Usage
 
@@ -126,12 +174,21 @@ changes do. Known keys: `project`, `score`, `standing`, `strengths`, `concerns`,
 - `0.1` — ✓ read-only audit · status · `--json` · target auto-detect · sidecar files
 - `0.2` — device-flow login · `commitshow submit` · `--watch` mode · CI exit-code gate
 - `0.3` — `commitshow install <pack>` with {{VARIABLE}} substitution
-- `0.4` — MCP server variant (Cursor / Claude Desktop can call commit.show tools directly · §15-C.6)
+- `0.4` — MCP server variant (Cursor / Claude Desktop can call commit.show tools directly)
 
 ## Links
 
-- Home: <https://commit.show>
-- Source: <https://github.com/hans1329/vibe/tree/main/packages/cli>
-- Issues: <https://github.com/hans1329/vibe/issues>
+- Home — <https://commit.show>
+- Source — <https://github.com/commitshow/cli>
+- Issues — <https://github.com/commitshow/cli/issues>
+- The platform repo — <https://github.com/commitshow/commitshow>
 
-MIT © 2026 commit.show
+---
+
+<p align="center">
+  <strong>Built one repo at a time. <a href="https://commit.show">commit.show</a></strong>
+</p>
+
+<p align="center">
+  MIT © 2026 commit.show
+</p>
