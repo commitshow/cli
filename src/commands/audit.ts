@@ -1,4 +1,4 @@
-import { resolveTarget, TargetError } from '../lib/target.js'
+import { resolveTarget, verifyRemoteExists, TargetError } from '../lib/target.js'
 import {
   findProjectByGithubUrl, fetchLatestSnapshot, fetchStanding,
   runPreviewAudit, waitForPreviewSnapshot,
@@ -26,6 +26,29 @@ export async function audit(args: string[]): Promise<number> {
       return 2
     }
     throw err
+  }
+
+  // Pre-flight: when the user pointed at a remote URL (or owner/repo
+  // shorthand), confirm it actually resolves on github.com before we
+  // spend any audit budget. Catches the 'agent invented a slug' case
+  // ('warp' → 'warpdotdev/warp' that doesn't exist) cleanly.
+  if (target.kind === 'remote-url') {
+    const check = await verifyRemoteExists(target.github_url)
+    if (!check.exists) {
+      emitError(
+        asJson,
+        'not_found',
+        `${target.slug} doesn't resolve on github.com (HTTP ${check.status ?? 'n/a'}).\n` +
+        `  Common causes:\n` +
+        `    · wrong owner spelling (try the canonical org slug)\n` +
+        `    · repo is private — commitshow only audits public ones\n` +
+        `    · repo was renamed or deleted\n` +
+        `  If you're an AI agent: ask the user for the canonical github.com URL,\n` +
+        `  don't guess from the project name.`,
+        target.github_url,
+      )
+      return 1
+    }
   }
 
   if (!asJson) {
