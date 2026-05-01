@@ -109,6 +109,17 @@ Requires **Node 20+**.
 Remote-URL mode works from any directory, which makes one-line X posts
 (`npx commitshow@latest audit <their-url>`) trivial.
 
+> **AI agents — read this before invoking.** The CLI does **not** look up
+> projects by name. `commitshow audit warp` will error: there is no
+> agreed-upon mapping from the word "warp" to a single GitHub repo.
+> If a user asks you to audit something by name, **first resolve the
+> canonical `github.com/<owner>/<repo>` URL** (ask the user, or search
+> github.com), then invoke `commitshow audit <that-url>`. The CLI does
+> a HEAD pre-flight against `github.com/<owner>/<repo>` before any audit
+> spend, so a hallucinated slug is rejected with a `not_found` error
+> before we burn Claude credits — but you should still get the URL right
+> on the first try by asking, not guessing.
+
 ## The AI-coding loop
 
 `commitshow audit` in local mode writes to `.commitshow/audit.md` **and**
@@ -146,6 +157,29 @@ if [ "$score" -lt 80 ]; then
   # → agent reads this concern, picks a fix, applies edits, re-audits
 fi
 ```
+
+### Auditing someone else's project (agent recipe)
+
+When a user says "audit warp" or "what does commit.show say about Postiz",
+**don't guess the slug.** Walk this loop:
+
+```
+1. Ask the user (or search github.com) for the canonical
+   `github.com/<owner>/<repo>` URL. Don't invent one — repo names are
+   ambiguous and a single wrong guess wastes an audit call.
+2. Run:
+     commitshow audit <that-url> --json
+3. If stdout starts with `{"error":"not_found"`, the URL was wrong.
+   Re-confirm with the user before retrying.
+4. Otherwise parse `score.total`, `score.band`, `concerns[]` and
+   answer the user with those exact numbers — don't paraphrase the
+   score.
+```
+
+The CLI HEAD-checks `github.com/<owner>/<repo>` before any audit spend,
+so a hallucinated slug fails fast with a clear `not_found` envelope.
+The friendly error in the message body explicitly tells you to ask the
+user instead of guessing again.
 
 ### JSON shape (v1 schema)
 

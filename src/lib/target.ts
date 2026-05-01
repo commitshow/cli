@@ -25,6 +25,38 @@ export interface Target {
 
 export class TargetError extends Error {}
 
+/**
+ * Cheap HEAD request against github.com/<owner>/<repo> so an agent that
+ * confidently invented a repo URL ('warp' → 'warpdotdev/warp' that doesn't
+ * exist) gets a clean 'no such repo' error before we burn an audit-preview
+ * call + Claude credits. Returns:
+ *   · { exists: true }              — 2xx/3xx response (or rate-limited; we
+ *                                     allow through rather than false-flag)
+ *   · { exists: false, status: 404 } — repo missing, private, or renamed
+ *   · { exists: true, ambiguous: true } — network/CORS/transient failure;
+ *                                     don't block the audit, let the
+ *                                     server-side path produce its own error
+ */
+export async function verifyRemoteExists(
+  githubUrl: string,
+): Promise<{ exists: boolean; status?: number; ambiguous?: boolean }> {
+  if (!/^https?:\/\/github\.com\//i.test(githubUrl)) return { exists: true, ambiguous: true }
+  try {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 5000)
+    const r = await fetch(githubUrl, {
+      method:   'HEAD',
+      redirect: 'follow',
+      signal:   ctrl.signal,
+    })
+    clearTimeout(t)
+    if (r.status === 404) return { exists: false, status: 404 }
+    return { exists: true, status: r.status }
+  } catch {
+    return { exists: true, ambiguous: true }
+  }
+}
+
 const GITHUB_URL_RE = /^https?:\/\/github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i
 const GITHUB_HOST_RE = /^github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i
 const GITHUB_SSH_RE = /^git@github\.com:([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i
