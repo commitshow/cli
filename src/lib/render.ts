@@ -894,7 +894,11 @@ export function renderUpsell(githubUrl?: string | null): string {
     : 'https://commit.show/submit'
   const titleVisible = 'Walk-on · drop-in audit, no audition yet'
   const headVisible  = 'Audition to unlock:'
-  const ctaVisible   = `→ ${submitUrl}`
+  // CTA URL renders OUTSIDE the box (after boxBottom()) — the encoded
+  // submit URL is 60-70 chars on most repos, which busts the 54-char
+  // inside-box content width and visually shears the right border off.
+  // Pulling it below the box also lets terminals auto-link the full
+  // https:// URL without truncation.
 
   lines.push('  ' + boxTop())
   lines.push('  ' + boxRow(
@@ -924,9 +928,10 @@ export function renderUpsell(githubUrl?: string | null): string {
     lines.push('  ' + boxRow(visible.length, it.tone('→ ') + c.cream(it.tag) + c.muted(it.rest)))
   }
 
-  lines.push('  ' + boxBlank())
-  lines.push('  ' + boxRow(ctaVisible.length, c.gold(ctaVisible)))
   lines.push('  ' + boxBottom())
+  // CTA outside the box · full URL stays clickable in modern terminals,
+  // and we don't have to truncate or shorten the slug.
+  lines.push('  ' + c.gold('→ ') + c.gold(submitUrl))
   return lines.join('\n')
 }
 
