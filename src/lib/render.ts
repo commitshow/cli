@@ -375,8 +375,13 @@ export function renderAudit(view: AuditView): string {
         lines.push('  ' + boxRow(2 + detailTrunc.length, c.muted('  ') + c.muted(detailTrunc)))
         // Third line: evidence (if any) · only on fail/warn so success cases stay compact
         if (it.evidence && (it.status === 'fail' || it.status === 'warn')) {
-          const evTrunc = truncate(it.evidence, 50)
-          lines.push('  ' + boxRow(2 + evTrunc.length, c.muted('  → ') + c.muted(evTrunc)))
+          // `'  → '` is 4 visible chars (two leading spaces + arrow + space)
+          // — boxRow needs the full visible length or its right │ lands 2
+          // cells too far right and the row "bursts" out of the box.
+          // Cap evTrunc at 48 so even on the widest evidence string the row
+          // stays inside CONTENT_W (54): 4 prefix + 48 evidence + 2 padding.
+          const evTrunc = truncate(it.evidence, 48)
+          lines.push('  ' + boxRow(4 + evTrunc.length, c.muted('  → ') + c.muted(evTrunc)))
         }
       }
       lines.push('  ' + boxBottom())
