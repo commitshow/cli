@@ -292,40 +292,62 @@ export function renderAudit(view: AuditView): string {
     lines.push('')
   }
 
-  // Hero score · big-digit ASCII for X-share screenshots.
-  // Now positioned AFTER concerns/strengths · the score is the receipt
-  // for the findings above, not the lead. Always brand gold for cohesive
-  // wordmark + score brand mark.
-  const bigRows  = bigText(String(total))
-  const bigWidth = bigRows[0].length
-  const leftPad  = Math.floor((58 - bigWidth) / 2)
-  for (const row of bigRows) {
-    lines.push('  ' + ' '.repeat(leftPad) + c.pixelInk(row))
-  }
-  // Breathing room between the hero ASCII and the small caption. Without
-  // it the "/ 100 · walk-on · strong" line glues to the bottom of the
-  // digits and the score reads as one block.
-  lines.push('')
-  // Caption · small "/ 100 · band" · band tinted so the signal lives there.
-  // Walk-on track gets an extra middle segment + a sub-line surfacing the
-  // 95 max so users read the score in the right context (88 walk-on ≠ 88
-  // league · perfect walk-on caps at 95 because Scout+Community pillars
-  // structurally unevaluated).
-  const band     = total >= 75 ? 'strong' : total >= 50 ? 'mid' : 'weak'
-  const bandTone = scoreTone(total)
+  // Hero score · trophy plate. Score + caption wrapped in a double-line
+  // ╔═╗ box so the X/Twitter screenshot has a single hero artifact you can
+  // crop to. Box is intentionally wider than tall (≈3:2) — square in cell
+  // count is too tall once the 6-row ANSI Shadow + 1 caption + 2 padding
+  // rows are stacked. Outer 58-col layout still centers the box.
+  const band      = total >= 75 ? 'strong' : total >= 50 ? 'mid' : 'weak'
+  const bandTone  = scoreTone(total)
+  const bigRows   = bigText(String(total))
+  const bigWidth  = bigRows[0].length
+
+  // Inner content width = the longer of (digit width, caption width) + a
+  // small breathing margin on each side. Box outer = inner + 2 (frame).
   const captionVisible = isWalkOn
     ? `/ 100 · walk-on · ${band}`
     : `/ 100 · ${band}`
-  const capPad   = Math.floor((58 - captionVisible.length) / 2)
+  const SCORE_PAD = 4 // 2 cells of breathing room on each side of widest line
+  const scoreInsideW = Math.max(bigWidth, captionVisible.length) + SCORE_PAD
+  const scoreOuterW  = scoreInsideW + 2
+
+  // Center the trophy box inside the 58-col layout
+  const trophyLeftPad = Math.max(0, Math.floor((58 - scoreOuterW) / 2))
+  const trophyIndent  = '  ' + ' '.repeat(trophyLeftPad)
+
+  const trophyTop    = c.muted('╔' + '═'.repeat(scoreInsideW) + '╗')
+  const trophyBottom = c.muted('╚' + '═'.repeat(scoreInsideW) + '╝')
+  const trophyBlank  = c.muted('║' + ' '.repeat(scoreInsideW) + '║')
+
+  // Center a colored line inside the box. visibleLen is the *visible*
+  // (ANSI-stripped) cell count of the colored content.
+  const trophyRow = (visibleLen: number, colored: string): string => {
+    const pad = Math.max(0, scoreInsideW - visibleLen)
+    const lp  = Math.floor(pad / 2)
+    const rp  = pad - lp
+    return c.muted('║') + ' '.repeat(lp) + colored + ' '.repeat(rp) + c.muted('║')
+  }
+
+  lines.push(trophyIndent + trophyTop)
+  lines.push(trophyIndent + trophyBlank)
+  for (const row of bigRows) {
+    lines.push(trophyIndent + trophyRow(bigWidth, c.pixelInk(row)))
+  }
+  lines.push(trophyIndent + trophyBlank)
+  // Caption row · band-tinted so the signal lives on the band word.
+  const captionColored = isWalkOn
+    ? c.muted('/ 100 · ') + c.gold('walk-on') + c.muted(' · ') + bandTone(band)
+    : c.muted('/ 100 · ') + bandTone(band)
+  lines.push(trophyIndent + trophyRow(captionVisible.length, captionColored))
+  lines.push(trophyIndent + trophyBottom)
+
+  // Walk-on sub-caption stays OUTSIDE the trophy — it's an explanation
+  // of the cap, not part of the headline. Keeps the box clean and tight
+  // for screenshot crops.
   if (isWalkOn) {
-    lines.push('  ' + ' '.repeat(capPad)
-      + c.muted('/ 100 · ') + c.gold('walk-on') + c.muted(' · ') + bandTone(band))
-    // Sub-caption explaining the 5pt headroom · centered, dim
     const subVisible = 'audition unlocks final 5 · max walk-on score 95'
     const subPad     = Math.floor((58 - subVisible.length) / 2)
     lines.push('  ' + ' '.repeat(subPad) + c.muted(subVisible))
-  } else {
-    lines.push('  ' + ' '.repeat(capPad) + c.muted('/ 100 · ') + bandTone(band))
   }
   lines.push('')
 
