@@ -34,40 +34,174 @@ function scoreBar(value: number, max: number): string {
   return tone('▰'.repeat(filled)) + c.muted('▱'.repeat(empty))
 }
 
-// 5-row × 5-col ASCII digit set · used for the hero score.
-// Hand-rolled (no external font dep) so the bundle stays tiny.
+// 10-row × 8-col chunky pixel digit set · two-cell-thick 7-segment digital
+// numerals. CEO referenced the Claude Code "CLAUDE CODE" pixel-grid logo:
+// thick block strokes, segment thickness 2 in pixel space, segments visibly
+// chunky enough to read as a pixel-art numeral on a wide terminal. Solid
+// '█' only — no half-blocks — so the digits stay opaque on every monospace
+// font. Each digit fits in 8 columns; a 3-digit "100" still lands inside
+// the 58-char box with breathing room.
 const BIG_DIGITS: Record<string, string[]> = {
-  '0': ['█▀▀▀█', '█   █', '█   █', '█   █', '█▄▄▄█'],
-  '1': ['  ▄█ ', '   █ ', '   █ ', '   █ ', '  ▄█▄'],
-  '2': ['█▀▀▀█', '    █', '█▀▀▀▀', '█    ', '█▄▄▄▄'],
-  '3': ['█▀▀▀█', '    █', ' ▀▀▀█', '    █', '█▄▄▄█'],
-  '4': ['█   █', '█   █', '█▄▄▄█', '    █', '    █'],
-  '5': ['█▀▀▀▀', '█    ', '▀▀▀▀█', '    █', '█▄▄▄█'],
-  '6': ['█▀▀▀▀', '█    ', '█▀▀▀█', '█   █', '█▄▄▄█'],
-  '7': ['█▀▀▀█', '    █', '   ▄▀', '  ▄▀ ', ' ▄▀  '],
-  '8': ['█▀▀▀█', '█   █', '█▀▀▀█', '█   █', '█▄▄▄█'],
-  '9': ['█▀▀▀█', '█   █', '█▄▄▄█', '    █', '█▄▄▄█'],
-  '/': ['    █', '   ▄▀', '  ▄▀ ', ' ▄▀  ', '█    '],
-  ' ': ['     ', '     ', '     ', '     ', '     '],
+  '0': [
+    '████████',
+    '████████',
+    '██    ██',
+    '██    ██',
+    '██    ██',
+    '██    ██',
+    '██    ██',
+    '██    ██',
+    '████████',
+    '████████',
+  ],
+  '1': [
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+  ],
+  '2': [
+    '████████',
+    '████████',
+    '      ██',
+    '      ██',
+    '████████',
+    '████████',
+    '██      ',
+    '██      ',
+    '████████',
+    '████████',
+  ],
+  '3': [
+    '████████',
+    '████████',
+    '      ██',
+    '      ██',
+    '████████',
+    '████████',
+    '      ██',
+    '      ██',
+    '████████',
+    '████████',
+  ],
+  '4': [
+    '██    ██',
+    '██    ██',
+    '██    ██',
+    '██    ██',
+    '████████',
+    '████████',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+  ],
+  '5': [
+    '████████',
+    '████████',
+    '██      ',
+    '██      ',
+    '████████',
+    '████████',
+    '      ██',
+    '      ██',
+    '████████',
+    '████████',
+  ],
+  '6': [
+    '████████',
+    '████████',
+    '██      ',
+    '██      ',
+    '████████',
+    '████████',
+    '██    ██',
+    '██    ██',
+    '████████',
+    '████████',
+  ],
+  '7': [
+    '████████',
+    '████████',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+    '      ██',
+  ],
+  '8': [
+    '████████',
+    '████████',
+    '██    ██',
+    '██    ██',
+    '████████',
+    '████████',
+    '██    ██',
+    '██    ██',
+    '████████',
+    '████████',
+  ],
+  '9': [
+    '████████',
+    '████████',
+    '██    ██',
+    '██    ██',
+    '████████',
+    '████████',
+    '      ██',
+    '      ██',
+    '████████',
+    '████████',
+  ],
+  '/': [
+    '      ██',
+    '      ██',
+    '     ██ ',
+    '    ██  ',
+    '   ██   ',
+    '  ██    ',
+    ' ██     ',
+    '██      ',
+    '██      ',
+    '██      ',
+  ],
+  ' ': [
+    '        ',
+    '        ',
+    '        ',
+    '        ',
+    '        ',
+    '        ',
+    '        ',
+    '        ',
+    '        ',
+    '        ',
+  ],
 }
 
-/** Render a string ("68", "100", "82/100") as 5 rows of big ASCII.
- *  Block runes ('█▀▄') render wider than ASCII chars in most monospace
- *  fonts; what looks like 1 col-width is actually closer to 1.2-1.5×.
- *  Earlier 1-space and 2-space gutters left adjacent digits visually
- *  fused. We now use a 4-space gutter — wide enough that '0' next to
- *  '0' reads as TWO digits rather than one wide blob. */
+const BIG_ROWS = 10
+
+/** Render a string ("68", "100", "82/100") as 7 rows of solid block ASCII.
+ *  Block runes ('█') render at ~1.2-1.5× monospace width, so a tight gutter
+ *  visually fuses neighboring digits. 6 spaces gives the digits room to
+ *  breathe without pushing 3-digit scores past the 58-char box.
+ */
 function bigText(text: string): string[] {
-  const rows = ['', '', '', '', '']
-  // Block runes (█▀▄) render at ~1.2-1.5× monospace width, so a tight gutter
-  // visually fuses neighboring digits (the old 4-space looked like one wide
-  // blob on most fonts). 6 spaces gives the digits room to breathe without
-  // pushing 3-digit scores past the box width.
+  const rows = Array.from({ length: BIG_ROWS }, () => '')
   const GAP = '      '   // 6-space gutter between glyphs
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
     const glyph = BIG_DIGITS[ch] ?? BIG_DIGITS[' ']
-    for (let r = 0; r < 5; r++) rows[r] += glyph[r] + (i < text.length - 1 ? GAP : '')
+    for (let r = 0; r < BIG_ROWS; r++) rows[r] += glyph[r] + (i < text.length - 1 ? GAP : '')
   }
   return rows
 }
