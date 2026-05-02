@@ -34,155 +34,140 @@ function scoreBar(value: number, max: number): string {
   return tone('▰'.repeat(filled)) + c.muted('▱'.repeat(empty))
 }
 
-// 5×7 pixel matrix per digit. Each "1" renders as a 2-char block (██)
-// with a 1-char gap between pixels — every cell visibly separated, the
-// "block grid" feel CEO referenced from the Claude Code logo. ANSI Shadow
-// gave a solid silhouette with no inter-pixel seams; this gives discrete
-// LCD-style blocks. Variable-width per glyph (some digits drop a pixel
-// column) handled at render time.
-type DigitMatrix = string[]   // 7 rows of "0"/"1" chars
-
-const BIG_DIGITS: Record<string, DigitMatrix> = {
+// ANSI Shadow figlet font · transcribed via oh-my-logo --filled. CEO
+// referenced the Claude Code style; Claude Code itself doesn't embed a
+// text-as-ASCII logo (only the Clawd mascot lives in its bundle), but
+// oh-my-logo is the open-source library that imitates the look and ANSI
+// Shadow is the free figlet font it uses. 6 rows tall, variable width per
+// glyph (4 to 10 cols), pre-padded so bigText concats cleanly.
+const BIG_DIGITS: Record<string, string[]> = {
   "0": [
-    "11111",
-    "10001",
-    "10001",
-    "10001",
-    "10001",
-    "10001",
-    "11111",
+    "  ██████╗ ",
+    " ██╔═████╗",
+    " ██║██╔██║",
+    " ████╔╝██║",
+    " ╚██████╔╝",
+    "  ╚═════╝ ",
   ],
   "1": [
-    "00100",
-    "01100",
-    "00100",
-    "00100",
-    "00100",
-    "00100",
-    "01110",
+    "  ██╗",
+    " ███║",
+    " ╚██║",
+    "  ██║",
+    "  ██║",
+    "  ╚═╝",
   ],
   "2": [
-    "11111",
-    "00001",
-    "00001",
-    "11111",
-    "10000",
-    "10000",
-    "11111",
+    " ██████╗ ",
+    " ╚════██╗",
+    "  █████╔╝",
+    " ██╔═══╝ ",
+    " ███████╗",
+    " ╚══════╝",
   ],
   "3": [
-    "11111",
-    "00001",
-    "00001",
-    "11111",
-    "00001",
-    "00001",
-    "11111",
+    " ██████╗ ",
+    " ╚════██╗",
+    "  █████╔╝",
+    "  ╚═══██╗",
+    " ██████╔╝",
+    " ╚═════╝ ",
   ],
   "4": [
-    "10001",
-    "10001",
-    "10001",
-    "11111",
-    "00001",
-    "00001",
-    "00001",
+    " ██╗  ██╗",
+    " ██║  ██║",
+    " ███████║",
+    " ╚════██║",
+    "      ██║",
+    "      ╚═╝",
   ],
   "5": [
-    "11111",
-    "10000",
-    "10000",
-    "11111",
-    "00001",
-    "00001",
-    "11111",
+    " ███████╗",
+    " ██╔════╝",
+    " ███████╗",
+    " ╚════██║",
+    " ███████║",
+    " ╚══════╝",
   ],
   "6": [
-    "11111",
-    "10000",
-    "10000",
-    "11111",
-    "10001",
-    "10001",
-    "11111",
+    "  ██████╗ ",
+    " ██╔════╝ ",
+    " ███████╗ ",
+    " ██╔═══██╗",
+    " ╚██████╔╝",
+    "  ╚═════╝ ",
   ],
   "7": [
-    "11111",
-    "00001",
-    "00001",
-    "00001",
-    "00001",
-    "00001",
-    "00001",
+    " ███████╗",
+    " ╚════██║",
+    "     ██╔╝",
+    "    ██╔╝ ",
+    "    ██║  ",
+    "    ╚═╝  ",
   ],
   "8": [
-    "11111",
-    "10001",
-    "10001",
-    "11111",
-    "10001",
-    "10001",
-    "11111",
+    "  █████╗ ",
+    " ██╔══██╗",
+    " ╚█████╔╝",
+    " ██╔══██╗",
+    " ╚█████╔╝",
+    "  ╚════╝ ",
   ],
   "9": [
-    "11111",
-    "10001",
-    "10001",
-    "11111",
-    "00001",
-    "00001",
-    "11111",
+    "  █████╗ ",
+    " ██╔══██╗",
+    " ╚██████║",
+    "  ╚═══██║",
+    "  █████╔╝",
+    "  ╚════╝ ",
   ],
   "/": [
-    "00001",
-    "00001",
-    "00010",
-    "00100",
-    "01000",
-    "10000",
-    "10000",
+    "     ██╗",
+    "    ██╔╝",
+    "   ██╔╝ ",
+    "  ██╔╝  ",
+    " ██╔╝   ",
+    " ╚═╝    ",
   ],
   " ": [
-    "00000",
-    "00000",
-    "00000",
-    "00000",
-    "00000",
-    "00000",
-    "00000",
+    "   ",
+    "   ",
+    "   ",
+    "   ",
+    "   ",
+    "   ",
   ],
 }
 
-const BIG_ROWS = 7
-const PIXEL_FILL  = "█"      // 1 char per pixel · halves width vs ██ so 3-digit scores stay inside narrow PC grid columns
-const PIXEL_BLANK = " "
-const PIXEL_GAP   = " "    // visible seam between pixels — the "block" feel
-const DIGIT_GAP   = "   "  // wider gap between digits so they read as separate numerals
+const BIG_ROWS = 6
 
-function digitToRows(d: string): string[] {
-  const m = BIG_DIGITS[d] ?? BIG_DIGITS[" "]
-  return m.map(row =>
-    row.split("").map(c => c === "1" ? PIXEL_FILL : PIXEL_BLANK).join(PIXEL_GAP)
-  )
-}
-
-/** Render a string ("68", "100", "82/100") as a pixel-grid block numeral. */
+/** Render a string ("68", "100", "82/100") in ANSI Shadow figlet font.
+ *  Each glyph already carries 1 col of leading + 1 col of trailing space,
+ *  so a 1-space gutter is enough to separate adjacent digits without the
+ *  tracking looking gappy. Variable-width glyphs are NOT padded — the
+ *  font is a proportional shadow font and looks best when concatenated
+ *  natively, exactly as `figlet` and oh-my-logo render it. */
 function bigText(text: string): string[] {
-  const rows = Array.from({ length: BIG_ROWS }, () => "")
-  const chars = text.split("")
-  for (let i = 0; i < chars.length; i++) {
-    const glyph = digitToRows(chars[i])
+  const rows = Array.from({ length: BIG_ROWS }, () => '')
+  const GAP = ' '
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    const glyph = BIG_DIGITS[ch] ?? BIG_DIGITS[' ']
     for (let r = 0; r < BIG_ROWS; r++) {
-      rows[r] += glyph[r] + (i < chars.length - 1 ? DIGIT_GAP : "")
+      rows[r] += glyph[r] + (i < text.length - 1 ? GAP : '')
     }
   }
   return rows
 }
 
+/** Visible (rune) length — counts Unicode code points so the centering math
+ *  treats `█` and `╔` as one column each, matching how monospace terminals
+ *  render the ANSI Shadow font. */
 function bigTextWidth(text: string): number {
   if (text.length === 0) return 0
   return [...bigText(text)[0]].length
 }
+
 
 function pad(s: string, w: number): string {
   return s.length >= w ? s.slice(0, w) : s + ' '.repeat(w - s.length)
