@@ -337,7 +337,7 @@ export function renderAudit(view: AuditView): string {
   const bigWidth = bigRows[0].length
   const leftPad  = Math.floor((58 - bigWidth) / 2)
   for (const row of bigRows) {
-    lines.push('  ' + ' '.repeat(leftPad) + c.goldDeep(row))
+    lines.push('  ' + ' '.repeat(leftPad) + c.pixelInk(row))
   }
   // Breathing room between the hero ASCII and the small caption. Without
   // it the "/ 100 · walk-on · strong" line glues to the bottom of the
