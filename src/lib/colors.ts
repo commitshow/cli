@@ -16,10 +16,11 @@ function rgb(r: number, g: number, b: number) {
 export const c = {
   gold:      rgb(0xF0, 0xC0, 0x40),
   goldDeep:  rgb(0xD4, 0xA8, 0x38),  // slightly darker · used for box drawing
-  // Big-digit hero ink. Peach/coral matched to the Claude Code "CLAUDE
-  // CODE" pixel-grid logo so the score block reads as the same family of
-  // chunky pixel art rather than a brand-gold variant.
-  pixelInk:  rgb(0xE8, 0x94, 0x6E),
+  // Big-digit hero ink · uses brand gold so the ANSI Shadow numeral reads
+  // as a commit.show mark, not a Claude Code mascot. (Earlier peach pass
+  // matched the Claude Code logo too literally — CEO pulled it back to
+  // brand on 2026-05-02.)
+  pixelInk:  rgb(0xF0, 0xC0, 0x40),
   cream:     rgb(0xF8, 0xF5, 0xEE),
   teal:      rgb(0x00, 0xD4, 0xAA),
   scarlet:   rgb(0xC8, 0x10, 0x2E),
