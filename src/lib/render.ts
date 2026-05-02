@@ -149,7 +149,11 @@ const BIG_ROWS = 6
  *  natively, exactly as `figlet` and oh-my-logo render it. */
 function bigText(text: string): string[] {
   const rows = Array.from({ length: BIG_ROWS }, () => '')
-  const GAP = ' '
+  // 0 explicit gutter — each glyph already carries its own leading and
+  // trailing whitespace, so concatenating with no extra gap still gives
+  // a visible 2-col space between adjacent digits. CEO tightened from 1
+  // (was reading too far apart at hero size).
+  const GAP = ''
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
     const glyph = BIG_DIGITS[ch] ?? BIG_DIGITS[' ']
