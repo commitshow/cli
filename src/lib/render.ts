@@ -154,8 +154,8 @@ const BIG_DIGITS: Record<string, DigitMatrix> = {
 }
 
 const BIG_ROWS = 7
-const PIXEL_FILL  = "██"   // 2 chars wide → roughly square at terminal cell aspect
-const PIXEL_BLANK = "  "
+const PIXEL_FILL  = "█"      // 1 char per pixel · halves width vs ██ so 3-digit scores stay inside narrow PC grid columns
+const PIXEL_BLANK = " "
 const PIXEL_GAP   = " "    // visible seam between pixels — the "block" feel
 const DIGIT_GAP   = "   "  // wider gap between digits so they read as separate numerals
 
