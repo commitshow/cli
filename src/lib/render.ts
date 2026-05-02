@@ -59,7 +59,11 @@ const BIG_DIGITS: Record<string, string[]> = {
  *  '0' reads as TWO digits rather than one wide blob. */
 function bigText(text: string): string[] {
   const rows = ['', '', '', '', '']
-  const GAP = '    '   // 4-space gutter between glyphs
+  // Block runes (█▀▄) render at ~1.2-1.5× monospace width, so a tight gutter
+  // visually fuses neighboring digits (the old 4-space looked like one wide
+  // blob on most fonts). 6 spaces gives the digits room to breathe without
+  // pushing 3-digit scores past the box width.
+  const GAP = '      '   // 6-space gutter between glyphs
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]
     const glyph = BIG_DIGITS[ch] ?? BIG_DIGITS[' ']
@@ -201,6 +205,10 @@ export function renderAudit(view: AuditView): string {
   for (const row of bigRows) {
     lines.push('  ' + ' '.repeat(leftPad) + c.goldDeep(row))
   }
+  // Breathing room between the hero ASCII and the small caption. Without
+  // it the "/ 100 · walk-on · strong" line glues to the bottom of the
+  // digits and the score reads as one block.
+  lines.push('')
   // Caption · small "/ 100 · band" · band tinted so the signal lives there.
   // Walk-on track gets an extra middle segment + a sub-line surfacing the
   // 95 max so users read the score in the right context (88 walk-on ≠ 88
@@ -294,11 +302,16 @@ export function renderAudit(view: AuditView): string {
   }
   lines.push('')
 
-  // Footer URLs
+  // Footer · project URL on its own line, brand wordmark on its own line,
+  // separated by a blank so a wrapped URL on a narrow terminal can't shove
+  // the wordmark off the right edge. Wordmark right-aligns to the standard
+  // 58-char layout box used by every other panel.
   const url = `https://commit.show/projects/${p.id}`
   lines.push('  ' + c.muted('→ ') + c.cream(url))
-  const footerPad = Math.max(0, 58 - 'commit.show'.length - 2)
-  lines.push(' '.repeat(footerPad) + c.gold('commit.show'))
+  lines.push('')
+  const wordmark = 'commit.show'
+  const footerPad = Math.max(0, BOX_W - wordmark.length)
+  lines.push(' '.repeat(footerPad) + c.gold(wordmark))
 
   return lines.join('\n')
 }
