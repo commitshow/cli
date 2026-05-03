@@ -440,6 +440,18 @@ export function renderAudit(view: AuditView): string {
   return lines.join('\n')
 }
 
+/**
+ * Star CTA · single line, brand-colored. The CLI prints this last on a
+ * successful audit (after renderAudit + any renderUpsell box) — the
+ * audit just delivered concrete value (concerns + score), which is the
+ * highest-leverage moment to ask for a GitHub star. Caller controls the
+ * placement so it always lands at the bottom of the full output.
+ */
+export function renderStarCta(): string {
+  return '  ' + c.muted('★ Like what you see? Star us · ')
+              + c.cream('github.com/commitshow/commitshow')
+}
+
 // ─── Vibe Coder Checklist · 7-category framework ───
 type VibeStatus = 'pass' | 'warn' | 'fail' | 'na'
 function vibeChecklistLines(vc: any): Array<{ key: string; status: VibeStatus; label: string; detail: string; evidence?: string }> {

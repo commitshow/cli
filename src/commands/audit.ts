@@ -5,7 +5,7 @@ import {
   type PreviewEnvelope, type PreviewError, type PreviewPending,
 } from '../lib/api.js'
 import {
-  renderAudit, renderMarkdown, renderJson, renderUpsell,
+  renderAudit, renderMarkdown, renderJson, renderUpsell, renderStarCta,
   renderQuotaFooter, renderRateLimitDeny, renderAuditError,
   writeAuditMarkdown, writeAuditJson,
 } from '../lib/render.js'
@@ -113,6 +113,9 @@ export async function audit(args: string[]): Promise<number> {
         console.log('')
         console.log(renderUpsell(project.github_url ?? target.github_url))
       }
+      // Star CTA always lands last · highest-leverage moment for a star.
+      console.log('')
+      console.log(renderStarCta())
       console.log('')
     }
     if (target.kind === 'local') {
