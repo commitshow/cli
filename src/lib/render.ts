@@ -265,20 +265,42 @@ export function renderAudit(view: AuditView): string {
   // ── 3 strengths + 2 concerns box · errors-first reorder (2026-04-30) ──
   // CONCERNS render before STRENGTHS · the value prop is "what your AI
   // missed", so they lead. Score follows as the receipt below.
+  //
+  // 3-tier severity (2026-05-04): the engine ranks weaknesses[] by impact,
+  // so we treat concerns[0] as CRITICAL (✕ scarlet) and the remainder as
+  // WARNING (⚠ gold). Strengths stay as ↑ teal. A one-line counter above
+  // the box gives a scannable tone summary without needing finding IDs.
   const strengths = asStringArray(snapshot?.rich_analysis?.scout_brief?.strengths, 3)
   const concerns  = asStringArray(snapshot?.rich_analysis?.scout_brief?.weaknesses, 2)
   if (strengths.length > 0 || concerns.length > 0) {
     const bulletWidth = CONTENT_W - 2
+
+    // Findings counter line · sits ABOVE the box so a quick scan picks up
+    // the tone (any criticals?) before reading the bullets.
+    const critCount = Math.min(concerns.length, 1)
+    const warnCount = Math.max(0, concerns.length - 1)
+    const counterParts: string[] = []
+    if (critCount > 0) counterParts.push(c.scarlet(`${critCount} critical`))
+    if (warnCount > 0) counterParts.push(c.gold(`${warnCount} warning`))
+    if (strengths.length > 0) counterParts.push(c.teal(`${strengths.length} strength${strengths.length === 1 ? '' : 's'}`))
+    if (counterParts.length > 0) {
+      lines.push('  ' + c.muted('Findings  · ') + counterParts.join(c.muted(' · ')))
+      lines.push('')
+    }
+
     lines.push('  ' + boxTop())
     // Heading row inside the box · "What this build missed" lead.
     if (concerns.length > 0) {
       const heading = 'What this build missed'
       lines.push('  ' + boxRow(heading.length, c.bold(c.scarlet(heading))))
     }
-    for (const s of concerns) {
-      const txt = truncate(s, bulletWidth)
-      lines.push('  ' + boxRow(2 + txt.length, c.scarlet('↓ ') + c.cream(txt)))
-    }
+    concerns.forEach((s, i) => {
+      const txt   = truncate(s, bulletWidth)
+      const isCrit = i === 0
+      const icon   = isCrit ? '✕ ' : '⚠ '
+      const tone   = isCrit ? c.scarlet : c.gold
+      lines.push('  ' + boxRow(2 + txt.length, tone(icon) + c.cream(txt)))
+    })
     if (strengths.length > 0) {
       if (concerns.length > 0) lines.push('  ' + boxBlank())
       const heading = 'What it got right'
@@ -433,6 +455,16 @@ export function renderAudit(view: AuditView): string {
   const url = `https://commit.show/projects/${p.id}`
   lines.push('  ' + c.muted('→ ') + c.cream(url))
   lines.push('')
+
+  // Agent-loop hint · nudges users into the `--json | jq` workflow that
+  // makes this CLI useful inside Claude Code · Cursor · etc. Static for
+  // V1 — could go contextual (CRIT-aware suggestions) in V1.5.
+  if (concerns.length > 0) {
+    const cmd = `commitshow audit ${p.github_url?.replace(/^https?:\/\//, '') ?? '.'} --json | jq .concerns`
+    lines.push('  ' + c.muted('next  · feed your AI loop  → ') + c.cream(cmd))
+    lines.push('')
+  }
+
   const wordmark = 'commit.show'
   const footerPad = Math.max(0, BOX_W - wordmark.length)
   lines.push(' '.repeat(footerPad) + c.gold(wordmark))
