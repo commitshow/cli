@@ -237,6 +237,177 @@ function bigText(text: string): string[] {
   return rows
 }
 
+// XL digit font · 12×12 chunky pixel art for the trophy big-score. Only
+// uses `█` and ` ` so horizontal scaling stays clean (ANSI Shadow's
+// box-drawing chars don't tile when doubled — `╔╔` reads as garbage).
+// Designed proportionally (≈ 1:1.3 visual ratio because terminal cells
+// are ~2:1 H:W) so a 2-digit score reads as "scaled up", not
+// "elongated". Used by bigTextXL · NOT by bigText (which still does
+// ANSI Shadow for any future banner use).
+const XL_ROWS = 12
+const BIG_DIGITS_XL: Record<string, string[]> = {
+  "0": [
+    "  ████████  ",
+    " ██      ██ ",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    " ██      ██ ",
+    "  ████████  ",
+  ],
+  "1": [
+    "     ██     ",
+    "    ███     ",
+    "   ████     ",
+    "     ██     ",
+    "     ██     ",
+    "     ██     ",
+    "     ██     ",
+    "     ██     ",
+    "     ██     ",
+    "     ██     ",
+    "     ██     ",
+    "████████████",
+  ],
+  "2": [
+    "  ████████  ",
+    "██        ██",
+    "          ██",
+    "         ██ ",
+    "        ██  ",
+    "       ██   ",
+    "      ██    ",
+    "     ██     ",
+    "    ██      ",
+    "   ██       ",
+    "██          ",
+    "████████████",
+  ],
+  "3": [
+    "  ████████  ",
+    "██        ██",
+    "          ██",
+    "          ██",
+    "          ██",
+    "   ████████ ",
+    "          ██",
+    "          ██",
+    "          ██",
+    "          ██",
+    "██        ██",
+    "  ████████  ",
+  ],
+  "4": [
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "████████████",
+    "          ██",
+    "          ██",
+    "          ██",
+    "          ██",
+    "          ██",
+  ],
+  "5": [
+    "████████████",
+    "██          ",
+    "██          ",
+    "██          ",
+    "██          ",
+    "███████████ ",
+    "          ██",
+    "          ██",
+    "          ██",
+    "          ██",
+    "██        ██",
+    "  ████████  ",
+  ],
+  "6": [
+    "  ████████  ",
+    "██        ██",
+    "██          ",
+    "██          ",
+    "██          ",
+    "███████████ ",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "  ████████  ",
+  ],
+  "7": [
+    "████████████",
+    "████████████",
+    "          ██",
+    "          ██",
+    "         ██ ",
+    "        ██  ",
+    "       ██   ",
+    "      ██    ",
+    "     ██     ",
+    "    ██      ",
+    "    ██      ",
+    "    ██      ",
+  ],
+  "8": [
+    "  ████████  ",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "  ████████  ",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "  ████████  ",
+  ],
+  "9": [
+    "  ████████  ",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    "██        ██",
+    " ███████████",
+    "          ██",
+    "          ██",
+    "          ██",
+    "          ██",
+    "██        ██",
+    "  ████████  ",
+  ],
+  " ": [
+    "    ", "    ", "    ", "    ", "    ", "    ",
+    "    ", "    ", "    ", "    ", "    ", "    ",
+  ],
+}
+
+/** XL render · 12-row chunky pixel art, used by the trophy. 1-space
+ *  gutter between glyphs, no leading/trailing pad (each glyph already
+ *  carries internal whitespace). */
+function bigTextXL(text: string): string[] {
+  const rows = Array.from({ length: XL_ROWS }, () => '')
+  const GAP = ' '
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    const glyph = BIG_DIGITS_XL[ch] ?? BIG_DIGITS_XL[' ']
+    for (let r = 0; r < XL_ROWS; r++) {
+      rows[r] += glyph[r] + (i < text.length - 1 ? GAP : '')
+    }
+  }
+  return rows
+}
+
 /** Visible (rune) length — counts Unicode code points so the centering math
  *  treats `█` and `╔` as one column each, matching how monospace terminals
  *  render the ANSI Shadow font. */
@@ -485,12 +656,11 @@ export function renderAudit(view: AuditView): string {
   // showing project identity, score, and brand mark in one frame.
   const band      = total >= 75 ? 'strong' : total >= 50 ? 'mid' : 'weak'
   const bandTone  = scoreTone(total)
-  // Double each row vertically so the score reads as a billboard, not a
-  // ticker. Width stays the same — only height grows from 6 → 12 rows.
-  // Naive duplication is fine because ANSI Shadow's diagonals already
-  // step in 1-cell increments; doubled they step in 2-cell increments,
-  // which reads as "scaled up" rather than "blurry".
-  const bigRows   = bigText(String(total)).flatMap(r => [r, r])
+  // 12×12 chunky pixel-art digits via bigTextXL · scales BOTH width and
+  // height (vs. row-doubling alone, which made the score read as
+  // elongated rather than enlarged). Pure block characters tile cleanly
+  // when concatenated — no ANSI Shadow box-drawing artifacts.
+  const bigRows   = bigTextXL(String(total))
   const bigWidth  = bigRows[0].length
 
   // Trophy: name strip + big digits + caption inside one ╔═╗ frame so a
