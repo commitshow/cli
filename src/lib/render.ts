@@ -314,84 +314,10 @@ export function renderAudit(view: AuditView): string {
     lines.push('')
   }
 
-  // Hero score · trophy plate. Score + caption wrapped in a double-line
-  // ╔═╗ box so the X/Twitter screenshot has a single hero artifact you can
-  // crop to. Box is intentionally wider than tall (≈3:2) — square in cell
-  // count is too tall once the 6-row ANSI Shadow + 1 caption + 2 padding
-  // rows are stacked. Outer 58-col layout still centers the box.
-  const band      = total >= 75 ? 'strong' : total >= 50 ? 'mid' : 'weak'
-  const bandTone  = scoreTone(total)
-  const bigRows   = bigText(String(total))
-  const bigWidth  = bigRows[0].length
-
-  // Inner content width = the longer of (digit width, caption width) + a
-  // small breathing margin on each side. Box outer = inner + 2 (frame).
-  const captionVisible = isWalkOn
-    ? `/ 100 · walk-on · ${band}`
-    : `/ 100 · ${band}`
-  const SCORE_PAD = 4 // 2 cells of breathing room on each side of widest line
-  const scoreInsideW = Math.max(bigWidth, captionVisible.length) + SCORE_PAD
-  const scoreOuterW  = scoreInsideW + 2
-
-  // Center the trophy box inside the 58-col layout
-  const trophyLeftPad = Math.max(0, Math.floor((58 - scoreOuterW) / 2))
-  const trophyIndent  = '  ' + ' '.repeat(trophyLeftPad)
-
-  const trophyTop    = c.muted('╔' + '═'.repeat(scoreInsideW) + '╗')
-  const trophyBottom = c.muted('╚' + '═'.repeat(scoreInsideW) + '╝')
-  const trophyBlank  = c.muted('║' + ' '.repeat(scoreInsideW) + '║')
-
-  // Center a colored line inside the box. visibleLen is the *visible*
-  // (ANSI-stripped) cell count of the colored content.
-  const trophyRow = (visibleLen: number, colored: string): string => {
-    const pad = Math.max(0, scoreInsideW - visibleLen)
-    const lp  = Math.floor(pad / 2)
-    const rp  = pad - lp
-    return c.muted('║') + ' '.repeat(lp) + colored + ' '.repeat(rp) + c.muted('║')
-  }
-
-  lines.push(trophyIndent + trophyTop)
-  lines.push(trophyIndent + trophyBlank)
-  for (const row of bigRows) {
-    lines.push(trophyIndent + trophyRow(bigWidth, c.pixelInk(row)))
-  }
-  lines.push(trophyIndent + trophyBlank)
-  // Caption row · band-tinted so the signal lives on the band word.
-  const captionColored = isWalkOn
-    ? c.muted('/ 100 · ') + c.gold('walk-on') + c.muted(' · ') + bandTone(band)
-    : c.muted('/ 100 · ') + bandTone(band)
-  lines.push(trophyIndent + trophyRow(captionVisible.length, captionColored))
-  lines.push(trophyIndent + trophyBottom)
-
-  // Walk-on sub-caption stays OUTSIDE the trophy — it's an explanation
-  // of the cap, not part of the headline. Keeps the box clean and tight
-  // for screenshot crops.
-  if (isWalkOn) {
-    const subVisible = 'audition unlocks final 5 · max walk-on score 95'
-    const subPad     = Math.floor((58 - subVisible.length) / 2)
-    lines.push('  ' + ' '.repeat(subPad) + c.muted(subVisible))
-  }
-  lines.push('')
-
-  // Axis bars · league shows all three; walk-on shows Audit only and
-  // surfaces Scout + Community as locked-with-unlock-hint rows.
-  // Walk-on Audit denominator is 45 (Brief slot excluded) so the math is
-  // visibly consistent with the big-digit normalization above.
-  const lockedBar     = '─ audition unlocks ─'   // exactly 20 cells · matches scoreBar width
-  const auditDen      = isWalkOn ? WALK_ON_AUDIT_MAX : 50
-  const auditScoreClamp = Math.min(p.score_auto ?? 0, auditDen)
-  const auditLine     = `  Audit  ${pad(`${auditScoreClamp}/${auditDen}`, 7)}  ${scoreBar(auditScoreClamp, auditDen)}`
-  lines.push('  ' + auditLine)
-  if (isWalkOn) {
-    lines.push('  ' + `  Scout  ${pad('—/30', 7)}  ` + c.muted(lockedBar))
-    lines.push('  ' + `  Comm.  ${pad('—/20', 7)}  ` + c.muted(lockedBar))
-  } else {
-    lines.push('  ' + `  Scout  ${pad(`${p.score_forecast}/30`, 7)}  ${scoreBar(p.score_forecast, 30)}`)
-    lines.push('  ' + `  Comm.  ${pad(`${p.score_community}/20`, 7)}  ${scoreBar(p.score_community, 20)}`)
-  }
-  lines.push('')
-
-  // (concerns/strengths block moved above the score · errors-first 2026-04-30)
+  // (Hero score · trophy plate + axis bars moved BELOW all info sections
+  //  on 2026-05-04 · "info top, capture-worthy hero at the bottom" so a
+  //  crop of the last block is a self-contained share asset. See the
+  //  HERO BLOCK construction near the end of this function.)
 
   // ─── AI Coder 7 Frames · signature framework ───
   // Render only the categories that produced an actionable status (fail /
@@ -456,14 +382,87 @@ export function renderAudit(view: AuditView): string {
   lines.push('  ' + c.muted('→ ') + c.cream(url))
   lines.push('')
 
-  // Agent-loop hint · nudges users into the `--json | jq` workflow that
-  // makes this CLI useful inside Claude Code · Cursor · etc. Static for
-  // V1 — could go contextual (CRIT-aware suggestions) in V1.5.
+  // Agent-loop hint · nudges users into the `--json` workflow that makes
+  // this CLI useful inside Claude Code · Cursor · etc. Kept short so it
+  // fits inside the 58-cell layout (longer "github.com/foo/bar --json |
+  // jq .concerns" forms blew past the wordmark right edge). The repo
+  // form drops to `.` because anyone running an agent loop is in cwd;
+  // the URL case is already covered by the walk-on upsell box below.
   if (concerns.length > 0) {
-    const cmd = `commitshow audit ${p.github_url?.replace(/^https?:\/\//, '') ?? '.'} --json | jq .concerns`
+    const cmd = 'commitshow audit . --json'
     lines.push('  ' + c.muted('next  · feed your AI loop  → ') + c.cream(cmd))
     lines.push('')
   }
+
+  // ─── HERO BLOCK · trophy + axis bars · 2026-05-04 ───
+  // All info sits ABOVE this block so a screenshot cropped to the bottom
+  // (trophy + axis bars + wordmark) is a self-contained share asset
+  // showing project identity, score, and brand mark in one frame.
+  const band      = total >= 75 ? 'strong' : total >= 50 ? 'mid' : 'weak'
+  const bandTone  = scoreTone(total)
+  const bigRows   = bigText(String(total))
+  const bigWidth  = bigRows[0].length
+
+  // Trophy: name strip + big digits + caption inside one ╔═╗ frame so a
+  // crop of just the trophy tells the whole story (project · score · band).
+  const slugVisible = (p.github_url?.replace(/^https?:\/\/github\.com\//, '') ?? '').slice(0, 40)
+  const captionVisible = isWalkOn
+    ? `/ 100 · walk-on · ${band}`
+    : `/ 100 · ${band}`
+  const SCORE_PAD = 4 // 2 cells of breathing room on each side of widest line
+  const scoreInsideW = Math.max(bigWidth, captionVisible.length, slugVisible.length) + SCORE_PAD
+  const scoreOuterW  = scoreInsideW + 2
+
+  const trophyLeftPad = Math.max(0, Math.floor((58 - scoreOuterW) / 2))
+  const trophyIndent  = '  ' + ' '.repeat(trophyLeftPad)
+
+  const trophyTop    = c.muted('╔' + '═'.repeat(scoreInsideW) + '╗')
+  const trophyBottom = c.muted('╚' + '═'.repeat(scoreInsideW) + '╝')
+  const trophyBlank  = c.muted('║' + ' '.repeat(scoreInsideW) + '║')
+
+  const trophyRow = (visibleLen: number, colored: string): string => {
+    const pad = Math.max(0, scoreInsideW - visibleLen)
+    const lp  = Math.floor(pad / 2)
+    const rp  = pad - lp
+    return c.muted('║') + ' '.repeat(lp) + colored + ' '.repeat(rp) + c.muted('║')
+  }
+
+  lines.push(trophyIndent + trophyTop)
+  if (slugVisible) {
+    lines.push(trophyIndent + trophyRow(slugVisible.length, c.muted(slugVisible)))
+  }
+  lines.push(trophyIndent + trophyBlank)
+  for (const row of bigRows) {
+    lines.push(trophyIndent + trophyRow(bigWidth, c.pixelInk(row)))
+  }
+  lines.push(trophyIndent + trophyBlank)
+  const captionColored = isWalkOn
+    ? c.muted('/ 100 · ') + c.gold('walk-on') + c.muted(' · ') + bandTone(band)
+    : c.muted('/ 100 · ') + bandTone(band)
+  lines.push(trophyIndent + trophyRow(captionVisible.length, captionColored))
+  lines.push(trophyIndent + trophyBottom)
+
+  if (isWalkOn) {
+    const subVisible = 'audition unlocks final 5 · max walk-on score 95'
+    const subPad     = Math.floor((58 - subVisible.length) / 2)
+    lines.push('  ' + ' '.repeat(subPad) + c.muted(subVisible))
+  }
+  lines.push('')
+
+  // Axis bars sit directly under the trophy as the per-pillar breakdown
+  // — same visual frame for share screenshots.
+  const lockedBar     = '─ audition unlocks ─'
+  const auditDen      = isWalkOn ? WALK_ON_AUDIT_MAX : 50
+  const auditScoreClamp = Math.min(p.score_auto ?? 0, auditDen)
+  lines.push('  ' + `  Audit  ${pad(`${auditScoreClamp}/${auditDen}`, 7)}  ${scoreBar(auditScoreClamp, auditDen)}`)
+  if (isWalkOn) {
+    lines.push('  ' + `  Scout  ${pad('—/30', 7)}  ` + c.muted(lockedBar))
+    lines.push('  ' + `  Comm.  ${pad('—/20', 7)}  ` + c.muted(lockedBar))
+  } else {
+    lines.push('  ' + `  Scout  ${pad(`${p.score_forecast}/30`, 7)}  ${scoreBar(p.score_forecast, 30)}`)
+    lines.push('  ' + `  Comm.  ${pad(`${p.score_community}/20`, 7)}  ${scoreBar(p.score_community, 20)}`)
+  }
+  lines.push('')
 
   const wordmark = 'commit.show'
   const footerPad = Math.max(0, BOX_W - wordmark.length)
