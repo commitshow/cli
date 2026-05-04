@@ -432,8 +432,23 @@ export function renderAudit(view: AuditView): string {
     lines.push(trophyIndent + trophyRow(slugVisible.length, c.muted(slugVisible)))
   }
   lines.push(trophyIndent + trophyBlank)
-  for (const row of bigRows) {
-    lines.push(trophyIndent + trophyRow(bigWidth, c.pixelInk(row)))
+  // Metallic-gold gradient · top row brightest, bottom row darkest. Single
+  // tone (`c.pixelInk`) read as flat — the SKILLS-style banner Google ships
+  // gets its "embossed coin" feel from a vertical light fall-off, which we
+  // approximate here within monospace constraints. Six rows because the
+  // ANSI Shadow font is 6 tall.
+  const GOLD_GRADIENT: [number, number, number][] = [
+    [0xFF, 0xE0, 0x78],  // row 0 · highlight
+    [0xF8, 0xD0, 0x60],  // row 1
+    [0xF0, 0xC0, 0x40],  // row 2 · brand mid
+    [0xE0, 0xA8, 0x30],  // row 3
+    [0xC8, 0x90, 0x20],  // row 4
+    [0xA8, 0x70, 0x18],  // row 5 · base shadow
+  ]
+  for (let i = 0; i < bigRows.length; i++) {
+    const [rr, gg, bb] = GOLD_GRADIENT[Math.min(i, GOLD_GRADIENT.length - 1)]
+    const colored = `\x1b[38;2;${rr};${gg};${bb}m${bigRows[i]}\x1b[0m`
+    lines.push(trophyIndent + trophyRow(bigWidth, colored))
   }
   lines.push(trophyIndent + trophyBlank)
   const captionColored = isWalkOn
