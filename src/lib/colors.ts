@@ -21,7 +21,12 @@ export const c = {
   // matched the Claude Code logo too literally — CEO pulled it back to
   // brand on 2026-05-02.)
   pixelInk:  rgb(0xF0, 0xC0, 0x40),
-  cream:     rgb(0xF8, 0xF5, 0xEE),
+  // `cream` was originally truecolor #F8F5EE (near-white), which is
+  // invisible on light-background terminals. Use the terminal's default
+  // foreground color (no escape) so body text reads on both light and
+  // dark backgrounds. The brand cream is preserved for accents (gold ·
+  // scarlet · teal) which stay readable on both.
+  cream:     (s: string) => s,
   teal:      rgb(0x00, 0xD4, 0xAA),
   scarlet:   rgb(0xC8, 0x10, 0x2E),
   muted:     rgb(0x6B, 0x72, 0x80),
