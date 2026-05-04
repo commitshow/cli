@@ -129,6 +129,83 @@ const BIG_DIGITS: Record<string, string[]> = {
     " ██╔╝   ",
     " ╚═╝    ",
   ],
+  // Uppercase letters — added 2026-05-04 for the COMMIT.SHOW banner that
+  // crowns each audit. Same ANSI Shadow font as the digits, transcribed
+  // from oh-my-logo / figlet so the wordmark and the score share visual
+  // weight. Only the letters needed for "COMMIT.SHOW" are included to
+  // keep the dictionary small.
+  "C": [
+    " ██████╗",
+    "██╔════╝",
+    "██║     ",
+    "██║     ",
+    "╚██████╗",
+    " ╚═════╝",
+  ],
+  "O": [
+    " ██████╗ ",
+    "██╔═══██╗",
+    "██║   ██║",
+    "██║   ██║",
+    "╚██████╔╝",
+    " ╚═════╝ ",
+  ],
+  "M": [
+    "███╗   ███╗",
+    "████╗ ████║",
+    "██╔████╔██║",
+    "██║╚██╔╝██║",
+    "██║ ╚═╝ ██║",
+    "╚═╝     ╚═╝",
+  ],
+  "I": [
+    "██╗",
+    "██║",
+    "██║",
+    "██║",
+    "██║",
+    "╚═╝",
+  ],
+  "T": [
+    "████████╗",
+    "╚══██╔══╝",
+    "   ██║   ",
+    "   ██║   ",
+    "   ██║   ",
+    "   ╚═╝   ",
+  ],
+  "S": [
+    "███████╗",
+    "██╔════╝",
+    "███████╗",
+    "╚════██║",
+    "███████║",
+    "╚══════╝",
+  ],
+  "H": [
+    "██╗  ██╗",
+    "██║  ██║",
+    "███████║",
+    "██╔══██║",
+    "██║  ██║",
+    "╚═╝  ╚═╝",
+  ],
+  "W": [
+    "██╗    ██╗",
+    "██║    ██║",
+    "██║ █╗ ██║",
+    "██║███╗██║",
+    "╚███╔███╔╝",
+    " ╚══╝╚══╝ ",
+  ],
+  ".": [
+    "   ",
+    "   ",
+    "   ",
+    "   ",
+    "██╗",
+    "╚═╝",
+  ],
   " ": [
     "   ",
     "   ",
@@ -246,14 +323,22 @@ export function renderAudit(view: AuditView): string {
   const isWalkOn   = p.status === 'preview'
   const total = p.score_total ?? 0
 
-  // Header
+  // Header · Claude Code-style welcome strip. Rounded corners (╭ ╮ ╰ ╯)
+  // + ✻ glyph match the visual signature Claude Code uses on launch.
+  // The ✻ is part of the wordmark line, not a separate panel — keeps
+  // the header to a single tight row.
   const lines: string[] = []
-  lines.push(boxTop())
-  lines.push(boxRow(
-    /* visibleLen */ 'commit.show · Audit report'.length,
-    c.bold(c.gold('commit.show')) + c.muted(' · ') + c.cream('Audit report'),
-  ))
-  lines.push(boxBottom())
+  const roundTop    = c.muted('╭' + '─'.repeat(INSIDE_W) + '╮')
+  const roundBottom = c.muted('╰' + '─'.repeat(INSIDE_W) + '╯')
+  lines.push(roundTop)
+  const titleVisible = '✻ commit.show — Audit report'
+  const titleColored = c.bold(c.gold('✻'))
+                     + ' '
+                     + c.bold(c.gold('commit.show'))
+                     + c.muted(' — ')
+                     + c.cream('Audit report')
+  lines.push(boxRow(titleVisible.length, titleColored))
+  lines.push(roundBottom)
   lines.push('')
 
   // Project title line
@@ -400,7 +485,12 @@ export function renderAudit(view: AuditView): string {
   // showing project identity, score, and brand mark in one frame.
   const band      = total >= 75 ? 'strong' : total >= 50 ? 'mid' : 'weak'
   const bandTone  = scoreTone(total)
-  const bigRows   = bigText(String(total))
+  // Double each row vertically so the score reads as a billboard, not a
+  // ticker. Width stays the same — only height grows from 6 → 12 rows.
+  // Naive duplication is fine because ANSI Shadow's diagonals already
+  // step in 1-cell increments; doubled they step in 2-cell increments,
+  // which reads as "scaled up" rather than "blurry".
+  const bigRows   = bigText(String(total)).flatMap(r => [r, r])
   const bigWidth  = bigRows[0].length
 
   // Trophy: name strip + big digits + caption inside one ╔═╗ frame so a
@@ -446,7 +536,13 @@ export function renderAudit(view: AuditView): string {
     [0xA8, 0x70, 0x18],  // row 5 · base shadow
   ]
   for (let i = 0; i < bigRows.length; i++) {
-    const [rr, gg, bb] = GOLD_GRADIENT[Math.min(i, GOLD_GRADIENT.length - 1)]
+    // Map row index to gradient bucket so 12 doubled rows still distribute
+    // smoothly across the 6 gold tones (each tone covers 2 doubled rows).
+    const gradIdx = Math.min(
+      GOLD_GRADIENT.length - 1,
+      Math.floor((i * GOLD_GRADIENT.length) / bigRows.length),
+    )
+    const [rr, gg, bb] = GOLD_GRADIENT[gradIdx]
     const colored = `\x1b[38;2;${rr};${gg};${bb}m${bigRows[i]}\x1b[0m`
     lines.push(trophyIndent + trophyRow(bigWidth, colored))
   }
