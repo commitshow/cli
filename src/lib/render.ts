@@ -494,11 +494,23 @@ export function renderAudit(view: AuditView): string {
   const isWalkOn   = p.status === 'preview'
   const total = p.score_total ?? 0
 
-  // Header · Claude Code-style welcome strip. Rounded corners (╭ ╮ ╰ ╯)
-  // + ✻ glyph match the visual signature Claude Code uses on launch.
-  // The ✻ is part of the wordmark line, not a separate panel — keeps
-  // the header to a single tight row.
   const lines: string[] = []
+
+  // Big COMMIT.SHOW ANSI Shadow banner. The wordmark needs ~105 cells
+  // including indent — show it whenever the terminal can fit it. Falls
+  // back to the small Claude-style strip below on narrow terminals so
+  // the brand still lands. COLUMNS env var is a fallback when stdout
+  // isn't a TTY (CI logs · piped output).
+  const cols = process.stdout.columns
+            ?? (process.env.COLUMNS ? Number(process.env.COLUMNS) : 80)
+  const bannerRows = bigText('COMMIT.SHOW')
+  if (cols >= bannerRows[0].length + 2) {
+    for (const r of bannerRows) lines.push('  ' + c.gold(r))
+    lines.push('')
+  }
+
+  // Claude Code-style welcome strip · rounded corners + ✻ glyph. Always
+  // shown so the brand mark lands even when the big banner doesn't fit.
   const roundTop    = c.muted('╭' + '─'.repeat(INSIDE_W) + '╮')
   const roundBottom = c.muted('╰' + '─'.repeat(INSIDE_W) + '╯')
   lines.push(roundTop)
@@ -656,11 +668,12 @@ export function renderAudit(view: AuditView): string {
   // showing project identity, score, and brand mark in one frame.
   const band      = total >= 75 ? 'strong' : total >= 50 ? 'mid' : 'weak'
   const bandTone  = scoreTone(total)
-  // 12×12 chunky pixel-art digits via bigTextXL · scales BOTH width and
-  // height (vs. row-doubling alone, which made the score read as
-  // elongated rather than enlarged). Pure block characters tile cleanly
-  // when concatenated — no ANSI Shadow box-drawing artifacts.
-  const bigRows   = bigTextXL(String(total))
+  // Original ANSI Shadow at 6-row native size · the box-drawing chars
+  // (╔ ╗ ║ ═ ╚ ╝) give an embossed 3D feel that pure-block scaling
+  // (BIG_DIGITS_XL · 0.3.22) flattens out. Reverted on user note that
+  // "입체효과가 없어졌다". Keep the gold gradient on top for the
+  // metallic finish — that part was approved.
+  const bigRows   = bigText(String(total))
   const bigWidth  = bigRows[0].length
 
   // Trophy: name strip + big digits + caption inside one ╔═╗ frame so a
