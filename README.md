@@ -87,12 +87,46 @@ Requires **Node 20+**.
 
 | Command | What it does |
 |---|---|
-| `commitshow audit [target]` | Fetch + render the latest audit, write `.commitshow/audit.md` in local mode |
-| `commitshow status [target]` | Same render, no re-run |
+| `commitshow audit [target] [--json] [--refresh] [--source=<tag>]` | Fetch + render the latest audit, write `.commitshow/audit.{md,json}` |
+| `commitshow status [target]` | Same render as `audit`, no re-run |
+| `commitshow login [--no-open] [--token <jwt>]` | Device-flow sign-in via browser approval |
+| `commitshow whoami [--logout]` | Print the linked account · `--logout` clears the saved token |
 | `commitshow submit [target]` | Audition a project (coming soon · needs login) |
 | `commitshow install <pack>` | Install a Library artifact (coming soon) |
-| `commitshow login` | Device-flow sign-in (coming soon) |
-| `commitshow whoami` | Print the linked account |
+
+### Sign in for higher rate limits
+
+```bash
+npx commitshow@latest login
+```
+
+Opens `commit.show/cli/link?code=<6-hex>` in your browser. After you
+click Authorize there, the CLI receives a 90-day JWT and saves it to
+`~/.commitshow/config.json` (file mode 0600). Subsequent calls send
+the token in the Authorization header automatically.
+
+What changes once signed in:
+
+- Per-IP rate cap goes from **20 audits/day** to **50/day**
+- Newly audited preview projects auto-claim ownership (visible at
+  [commit.show/me](https://commit.show/me) → MY AUDITS)
+- `commitshow whoami` prints your member id + email
+
+Headless / CI? Use `--token <jwt>` to skip the browser handshake.
+
+### Telemetry source flag
+
+`--source=<tag>` lets you self-report how the call originated:
+
+```bash
+npx commitshow audit . --source=claude-code
+COMMITSHOW_SOURCE=cursor npx commitshow audit .
+```
+
+Common tags: `claude-code` · `cursor` · `gemini-cli` · `codex` ·
+`antigravity` · `production-audit-skill` · any 64-char string. Drops
+into the maintainer's admin breakdown so we can see which agent
+ecosystems are driving installs. Skip the flag to stay anonymous.
 
 ### Target forms
 
@@ -206,9 +240,9 @@ changes do. Known keys: `project`, `score`, `standing`, `strengths`, `concerns`,
 ## Roadmap
 
 - `0.1` — ✓ read-only audit · status · `--json` · target auto-detect · sidecar files
-- `0.2` — device-flow login · `commitshow submit` · `--watch` mode · CI exit-code gate
-- `0.3` — `commitshow install <pack>` with {{VARIABLE}} substitution
-- `0.4` — MCP server variant (Cursor / Claude Desktop can call commit.show tools directly)
+- `0.3` — ✓ device-flow login · `--source` telemetry · User-Agent self-report · MCP server (`commitshow-mcp`)
+- `0.4` — `commitshow submit` · `--watch` mode · CI exit-code gate · refresh-token flow
+- `0.5` — `commitshow install <pack>` with {{VARIABLE}} substitution
 
 ## Links
 
