@@ -22,12 +22,36 @@ function baseUrl(): string {
   return readConfig().base_url ?? DEFAULT_BASE_URL
 }
 
+// Self-identifying User-Agent so the server can break down CLI hits by
+// version + runtime + platform (visible in /admin > CLI 사용 탭).
+// Anonymous — no PII, just version/runtime breakdown for traction signal.
+// Format: 'commitshow-cli/<ver> node/<v> <platform>-<arch>'
+//   e.g. 'commitshow-cli/0.3.13 node/v20.10.0 darwin-arm64'
+const CLI_USER_AGENT = (() => {
+  // package.json version is bundled at build time via tsc resolution; we
+  // still hardcode a fallback so a stripped binary doesn't crash.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  let version = 'unknown'
+  try {
+    // Lazy-require so this import doesn't break in Deno-like envs.
+    // The build script copies package.json next to the bundle.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const pkg = require('../../package.json')
+    if (typeof pkg?.version === 'string') version = pkg.version
+  } catch { /* fall through · version stays 'unknown' */ }
+  const node = process.version || 'node'
+  const plat = `${process.platform}-${process.arch}`
+  return `commitshow-cli/${version} node/${node} ${plat}`
+})()
+
 function headers(extra: Record<string, string> = {}): Record<string, string> {
   const cfg = readConfig()
   return {
     apikey:        DEFAULT_ANON_KEY,
     Authorization: `Bearer ${cfg.token ?? DEFAULT_ANON_KEY}`,
     'Content-Type': 'application/json',
+    'User-Agent':   CLI_USER_AGENT,
+    'X-Commitshow-Source': process.env.COMMITSHOW_SOURCE ?? '',
     ...extra,
   }
 }
@@ -213,12 +237,17 @@ export interface PreviewError {
 export async function runPreviewAudit(
   githubUrl: string,
   liveUrl?: string,
-  opts: { force?: boolean } = {},
+  opts: { force?: boolean; source?: string | null } = {},
 ): Promise<PreviewEnvelope | PreviewPending | PreviewError> {
   const res = await fetch(`${baseUrl()}/functions/v1/audit-preview`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({ github_url: githubUrl, live_url: liveUrl, force: opts.force === true }),
+    body: JSON.stringify({
+      github_url: githubUrl,
+      live_url:   liveUrl,
+      force:      opts.force === true,
+      source:     opts.source ?? null,
+    }),
   })
   const body = await res.json().catch(() => ({ error: 'invalid_json' }))
   if (res.status === 202) return body as PreviewPending

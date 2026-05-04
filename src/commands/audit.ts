@@ -15,7 +15,16 @@ import { Spinner } from '../lib/spinner.js'
 export async function audit(args: string[]): Promise<number> {
   const asJson = args.includes('--json')
   const force  = args.includes('--refresh') || args.includes('--force')
-  const positional = args.find(a => !a.startsWith('--'))
+  // --source=<name> · self-reported call origin (claude-code · cursor ·
+  // antigravity · gemini-cli · codex · raw-cli · etc.). Falls back to
+  // the COMMITSHOW_SOURCE env var (used by IDE plugins that wrap the
+  // CLI) and ultimately empty string. Surfaced in /admin > CLI 사용
+  // tab as a distribution chart.
+  const sourceFlag = args.find(a => a.startsWith('--source='))?.split('=')[1]
+                  ?? args[args.indexOf('--source') + 1]?.replace(/^-/, '') // tolerate --source X
+                  ?? process.env.COMMITSHOW_SOURCE
+                  ?? null
+  const positional = args.find(a => !a.startsWith('--') && a !== sourceFlag)
 
   let target
   try {
@@ -136,7 +145,7 @@ export async function audit(args: string[]): Promise<number> {
     else       console.log(c.dim('First time on commit.show for this repo — running a preview audit…'))
   }
 
-  const result = await runPreviewAudit(target.github_url, undefined, { force })
+  const result = await runPreviewAudit(target.github_url, undefined, { force, source: sourceFlag })
 
   // Error envelope
   if ('error' in result) {
