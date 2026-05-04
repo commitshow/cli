@@ -17,34 +17,73 @@ npx commitshow@latest audit github.com/owner/repo
 ```
 
 ```
-  ┌──────────────────────────────────────────────────────────┐
-  │  commit.show · Audit report                               │
-  └──────────────────────────────────────────────────────────┘
+   ██████╗  ██████╗  ███╗   ███╗ ███╗   ███╗ ██╗ ████████╗     ███████╗ ██╗  ██╗  ██████╗  ██╗    ██╗
+  ██╔════╝ ██╔═══██╗ ████╗ ████║ ████╗ ████║ ██║ ╚══██╔══╝     ██╔════╝ ██║  ██║ ██╔═══██╗ ██║    ██║
+  ██║      ██║   ██║ ██╔████╔██║ ██╔████╔██║ ██║    ██║        ███████╗ ███████║ ██║   ██║ ██║ █╗ ██║
+  ██║      ██║   ██║ ██║╚██╔╝██║ ██║╚██╔╝██║ ██║    ██║        ╚════██║ ██╔══██║ ██║   ██║ ██║███╗██║
+  ╚██████╗ ╚██████╔╝ ██║ ╚═╝ ██║ ██║ ╚═╝ ██║ ██║    ██║    ██╗ ███████║ ██║  ██║ ╚██████╔╝ ╚███╔███╔╝
+   ╚═════╝  ╚═════╝  ╚═╝     ╚═╝ ╚═╝     ╚═╝ ╚═╝    ╚═╝    ╚═╝ ╚══════╝ ╚═╝  ╚═╝  ╚═════╝   ╚══╝╚══╝
 
-    maa-website                     austinpw-cloud/maa-website
+╭────────────────────────────────────────────────────────╮
+│ ✻ commit.show — Audit report                           │
+╰────────────────────────────────────────────────────────╯
 
-                         ╔══════════════╗
-                         ║   82 / 100   ║
-                         ╚══════════════╝
+  commitshow   github.com/commitshow/commitshow
 
-      Audit  42/50  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱
-      Scout  26/30  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱
-      Comm.  14/20  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱
+  Findings  · 1 critical · 1 warning · 3 strengths
 
-    ┌───────────────────────────────────────────────────────┐
-    │ ↑ 80+ edge functions · LCP 1.4s · 50 RLS policies     │
-    │ ↑ Brief integrity 9/10 · all 6 sections answered      │
-    │ ↑ Tech layers 6 · full-stack evidence                 │
-    │ ↓ Accessibility 72 · buttons missing aria-labels      │
-    │ ↓ No API rate limiting on /auth endpoint              │
-    └───────────────────────────────────────────────────────┘
+  ┌────────────────────────────────────────────────────────┐
+  │ What this build missed                                 │
+  │ ✕ 25 FK columns unindexed — fk_columns_seen=100 vs in… │
+  │ ⚠ Zero observability libs in 17 deps — no Sentry, Pin… │
+  │                                                        │
+  │ What it got right                                      │
+  │ ↑ 56 RLS policies cover all 19 tables — gap_estimate=… │
+  │ ↑ Lighthouse accessibility 93, best practices 96, SEO… │
+  │ ↑ Rate-limit middleware active on API routes — vibe_c… │
+  └────────────────────────────────────────────────────────┘
 
-      Ranked    #3 of 47   Season Zero
-      Tier      Honors     (top 5%)
-      Δ         +12        since yesterday's audit
+  ┌────────────────────────────────────────────────────────┐
+  │ AI Coder 7 Frames · what AI ships without              │
+  │                                                        │
+  │ ✕ Error tracking                                       │
+  │   no sentry / datadog / pino / winston / otel lib in…  │
+  │ ⚠ Database indexes                                     │
+  │   100 FK columns · 75 indexes · 25 unindexed           │
+  │   → supabase/schema.sql · id → auth                    │
+  │ ✓ RLS coverage                                         │
+  │   19 tables · 56 policies · all covered                │
+  │ ✓ Secret in client code                                │
+  │   no service-role keys in client paths                 │
+  │ ✓ API rate limiting                                    │
+  │   custom middleware detected                           │
+  └────────────────────────────────────────────────────────┘
 
-    → commit.show/projects/bfe11d75-dc67-…
-                                                       commit.show
+  Δ        +20           since last audit
+
+  → https://commit.show/projects/1c262df3-…
+
+  next  · feed your AI loop  → commitshow audit . --json
+
+                ╔════════════════════════════╗
+                ║   commitshow/commitshow    ║
+                ║                            ║
+                ║     ███████╗  ███████╗     ║
+                ║     ╚════██║  ╚════██║     ║
+                ║         ██╔╝      ██╔╝     ║
+                ║        ██╔╝      ██╔╝      ║
+                ║        ██║       ██║       ║
+                ║        ╚═╝       ╚═╝       ║
+                ║                            ║
+                ║  / 100 · walk-on · strong  ║
+                ╚════════════════════════════╝
+       audition unlocks final 5 · max walk-on score 95
+
+    Audit  35/50    ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱
+    Scout  —/30     ─ audition unlocks ─
+    Comm.  —/20     ─ audition unlocks ─
+
+                                               commit.show
 ```
 
 > [⭐ Star us on GitHub](https://github.com/commitshow/cli) if `commitshow audit` saved you a `// TODO`.
@@ -231,11 +270,18 @@ changes do. Known keys: `project`, `score`, `standing`, `strengths`, `concerns`,
 
 ## What's in the report
 
-- **Score** · total out of 100, colored by threshold (teal ≥ 75 · gold 50–74 · scarlet < 50)
-- **3-axis bars** · Audit / Scout / Community
-- **3 strengths + 2 concerns** · asymmetric by design — concerns don't dominate
-- **Rank + projected tier** · where you stand in the current season
-- **Δ** · movement since the parent snapshot
+Top-to-bottom, what each section gives you:
+
+- **COMMIT.SHOW masthead** · ANSI Shadow wordmark on terminals ≥ 100 cols. The thin rounded `╭ ✻ commit.show — Audit report ╮` strip is always rendered as the title fallback.
+- **Findings counter** · `Findings · 1 critical · 1 warning · 3 strengths` — scan one line, you know the tone before reading the bullets.
+- **What this build missed** · errors-first box. First concern is `✕` scarlet (highest-impact), the rest are `⚠` gold. Engine ranks them by decision-impact, not by severity tier.
+- **What it got right** · `↑` teal · 3 bullets · for context only. Don't lead with these.
+- **AI Coder 7 Frames** · the deterministic pillar — RLS coverage, secret-in-bundle, API rate limiting, prompt-injection surface, DB indexes, mock data in prod, error tracking. Pass / warn / fail per frame, with file paths.
+- **Δ since last audit** · positive = improving · negative = regressed · null on first run.
+- **`next:` hint** · one-line nudge to feed `--json | jq .concerns` into your coding agent.
+- **Trophy block** · score billboard (metallic-gold gradient · ANSI Shadow digits) with the repo slug embedded so a screenshot crop is self-contained. Axis bars (Audit / Scout / Community) sit directly under it as the per-pillar breakdown. `commit.show` wordmark anchors the bottom-right.
+
+Walk-on auditions cap the `Audit` axis at `45/50` and lock `Scout` / `Community` behind the audition gate; the captions explicitly call this out.
 
 ## Roadmap
 
