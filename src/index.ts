@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import { audit }   from './commands/audit.js'
 import { submit }  from './commands/submit.js'
 import { install } from './commands/install.js'
@@ -7,7 +10,19 @@ import { whoami }  from './commands/whoami.js'
 import { c } from './lib/colors.js'
 import { checkLatestVersion, formatUpdateBanner } from './lib/version-check.js'
 
-const VERSION = '0.2.11'
+// Read version from package.json at runtime so a hardcoded constant
+// can't go stale across publishes. (Previous incident: source said
+// '0.2.11' while npm shipped 0.3.x — every binary nagged users to
+// upgrade to a version they were already on.)
+const VERSION: string = (() => {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url))
+    const pkg  = JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf8')) as { version?: string }
+    return pkg.version ?? '0.0.0'
+  } catch {
+    return '0.0.0'
+  }
+})()
 
 const USAGE = `
 ${c.bold(c.gold('commit.show'))} ${c.dim(`v${VERSION}`)}  ${c.muted('—')} ${c.cream('audit any vibe-coded project from your terminal.')}

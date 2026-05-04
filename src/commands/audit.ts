@@ -20,8 +20,15 @@ export async function audit(args: string[]): Promise<number> {
   // the COMMITSHOW_SOURCE env var (used by IDE plugins that wrap the
   // CLI) and ultimately empty string. Surfaced in /admin > CLI 사용
   // tab as a distribution chart.
+  // --source X (space form): only consume args[idx+1] when --source actually
+  // appears. Old code used `args.indexOf('--source') + 1` unguarded, which
+  // returns 0 when --source is absent — making the FIRST positional arg
+  // (e.g. the target URL) get misread as the source value, then filtered
+  // out of `positional` below. Result: target URL silently dropped, CLI
+  // falls back to cwd and reports "no git remote".
+  const sourceIdx = args.indexOf('--source')
   const sourceFlag = args.find(a => a.startsWith('--source='))?.split('=')[1]
-                  ?? args[args.indexOf('--source') + 1]?.replace(/^-/, '') // tolerate --source X
+                  ?? (sourceIdx >= 0 ? args[sourceIdx + 1] : undefined)
                   ?? process.env.COMMITSHOW_SOURCE
                   ?? null
   const positional = args.find(a => !a.startsWith('--') && a !== sourceFlag)
