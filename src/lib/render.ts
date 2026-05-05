@@ -496,17 +496,29 @@ export function renderAudit(view: AuditView): string {
 
   const lines: string[] = []
 
-  // Big COMMIT.SHOW ANSI Shadow banner. The wordmark needs ~105 cells
-  // including indent — show it whenever the terminal can fit it. Falls
-  // back to the small Claude-style strip below on narrow terminals so
-  // the brand still lands. COLUMNS env var is a fallback when stdout
-  // isn't a TTY (CI logs · piped output).
+  // Big COMMIT.SHOW ANSI Shadow banner. Three-tier fallback by width:
+  //   · cols ≥ 99      → single-line "COMMIT.SHOW"
+  //   · cols ≥ 50      → stacked two-line "COMMIT." / "SHOW" so the
+  //                       brand still lands at standard 80-col terminals
+  //   · cols < 50      → fall through to the Claude-style strip only
+  // COLUMNS env var is the fallback when stdout isn't a TTY (CI logs ·
+  // piped output).
   const cols = process.stdout.columns
             ?? (process.env.COLUMNS ? Number(process.env.COLUMNS) : 80)
-  const bannerRows = bigText('COMMIT.SHOW')
-  if (cols >= bannerRows[0].length + 2) {
-    for (const r of bannerRows) lines.push('  ' + c.gold(r))
+  const single = bigText('COMMIT.SHOW')
+  const singleW = single[0].length
+  if (cols >= singleW + 2) {
+    for (const r of single) lines.push('  ' + c.gold(r))
     lines.push('')
+  } else {
+    const top = bigText('COMMIT.')
+    const bot = bigText('SHOW')
+    const stackedW = Math.max(top[0].length, bot[0].length)
+    if (cols >= stackedW + 2) {
+      for (const r of top) lines.push('  ' + c.gold(r))
+      for (const r of bot) lines.push('  ' + c.gold(r))
+      lines.push('')
+    }
   }
 
   // Claude Code-style welcome strip · rounded corners + ✻ glyph. Always
