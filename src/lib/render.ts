@@ -540,6 +540,15 @@ export function renderAudit(view: AuditView): string {
   const name = p.project_name ?? 'untitled'
   const slug = p.github_url?.replace(/^https?:\/\//, '') ?? ''
   lines.push('  ' + c.bold(c.cream(name)) + '   ' + c.muted(slug))
+
+  // Scanned-scope transparency line · monorepo-aware. For supabase-style
+  // big monorepos, this disarms the "you said our service fails X" trap
+  // by stating what was actually traversed (apps/studio + apps/www, not
+  // postgres-meta or gotrue or storage which live in separate repos).
+  const scope = (snapshot?.github_signals as { scanned_scope?: string } | null | undefined)?.scanned_scope
+  if (scope) {
+    lines.push('  ' + c.muted('Scanned · ') + c.cream(scope))
+  }
   lines.push('')
 
   // ── 3 strengths + 2 concerns box · errors-first reorder (2026-04-30) ──
@@ -949,6 +958,15 @@ export function renderMarkdown(view: AuditView): string {
   lines.push('')
   lines.push(`**${p.project_name}**`)
   if (p.github_url) lines.push(`_${p.github_url}_`)
+
+  // Scope transparency · same string the CLI prints. Lets a downstream
+  // agent reading audit.md know whether the concerns came from the core
+  // service or from a dashboard / marketing sub-app of a monorepo.
+  const scope = (snapshot?.github_signals as { scanned_scope?: string } | null | undefined)?.scanned_scope
+  if (scope) {
+    lines.push('')
+    lines.push(`Scanned · ${scope}`)
+  }
   lines.push('')
 
   // errors-first markdown order (2026-04-30) · concerns + strengths
@@ -1017,6 +1035,15 @@ export interface AgentJsonShape {
       grade: string | null
     }
     url: string
+    /** Human-readable description of what was actually traversed during
+     *  the audit. Critical for monorepos — outsiders often read concerns
+     *  out of a big monorepo (e.g. supabase/supabase) as if they applied
+     *  to the core service, when the scan actually only saw the
+     *  dashboard / marketing sub-apps. The string names the workspace
+     *  directories (e.g. "monorepo · 18 sub-apps · audit covers
+     *  apps/studio + apps/www + apps/docs + 15 more"). null when
+     *  github_signals isn't populated (older snapshots). */
+    scanned_scope?: string | null
   }
   score: {
     /** "walk_on" = preview / CLI-only · scored on Audit pillar normalized
@@ -1112,6 +1139,7 @@ export function toAgentShape(view: AuditView): AgentJsonShape {
       status:     p.status,
       creator: { name: p.creator_name, grade: p.creator_grade },
       url:        `https://commit.show/projects/${p.id}`,
+      scanned_scope: (snapshot?.github_signals as { scanned_scope?: string } | null | undefined)?.scanned_scope ?? null,
     },
     score: {
       track:            isWalkOn ? 'walk_on' : 'league',
