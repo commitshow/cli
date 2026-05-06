@@ -46,7 +46,7 @@ const CLI_USER_AGENT = (() => {
 
 function headers(extra: Record<string, string> = {}): Record<string, string> {
   const cfg = readConfig()
-  return {
+  const h: Record<string, string> = {
     apikey:        DEFAULT_ANON_KEY,
     Authorization: `Bearer ${cfg.token ?? DEFAULT_ANON_KEY}`,
     'Content-Type': 'application/json',
@@ -54,6 +54,15 @@ function headers(extra: Record<string, string> = {}): Record<string, string> {
     'X-Commitshow-Source': process.env.COMMITSHOW_SOURCE ?? '',
     ...extra,
   }
+  // Dev/admin bypass · COMMITSHOW_ADMIN_TOKEN env unlocks all rate
+  // limits server-side (matches the /admin web console pattern).
+  // Used during development so we can hammer the audit pipeline
+  // without blowing through the 50/day IP cap. NEVER document this
+  // in the public CLI help — it's a server-side admin-token check
+  // and only works for token holders.
+  const adminTok = process.env.COMMITSHOW_ADMIN_TOKEN
+  if (adminTok) h['x-admin-token'] = adminTok
+  return h
 }
 
 async function rest<T>(path: string, init: RequestInit = {}): Promise<T> {
