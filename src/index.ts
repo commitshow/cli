@@ -35,7 +35,7 @@ ${c.muted('COMMANDS')}
   ${c.gold('audit')}    [target]    run audit and render the report
   ${c.gold('status')}   [target]    latest score, no re-run
   ${c.gold('submit')}   [target]    audition a project (requires login · coming soon)
-  ${c.gold('install')}  <pack>      install a library artifact (coming soon)
+  ${c.gold('install')}  <slug>      install a library pack (e.g. supabase-resend-auth)
   ${c.gold('login')}                device-flow sign-in (coming soon)
   ${c.gold('whoami')}                who am I signed in as
 

@@ -1,7 +1,7 @@
 {
   "name": "commitshow",
-  "version": "0.3.25",
-  "description": "commit.show CLI — audit any vibe-coded project from your terminal.",
+  "version": "0.3.26",
+  "description": "commit.show CLI \u2014 audit any vibe-coded project from your terminal.",
   "type": "module",
   "bin": {
     "commitshow": "./bin/commitshow.js"
