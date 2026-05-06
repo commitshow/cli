@@ -40,15 +40,21 @@ ${c.muted('COMMANDS')}
   ${c.gold('whoami')}                who am I signed in as
 
 ${c.muted('FLAGS')}
-  ${c.gold('--json')}     stable machine-readable output (for agents · CI · jq pipes)
-  ${c.gold('--refresh')}  bypass the 7-day cache · re-run a fresh audit ${c.dim('(counts against IP cap)')}
+  ${c.gold('--json')}                stable machine-readable output (for agents · CI · jq pipes)
+  ${c.gold('--refresh')}             bypass the 7-day cache · re-run a fresh audit ${c.dim('(counts against IP cap)')}
+  ${c.gold('--workspace')} ${c.cream('<path>')}   monorepo: audit only this sub-app (e.g. apps/web · packages/next)
 
 ${c.muted('TARGET FORMS')}  ${c.dim('(default: cwd)')}
-  ${c.cream('commitshow audit')}                          ${c.dim('# cwd · git remote origin')}
-  ${c.cream('commitshow audit ./my-repo')}                ${c.dim('# local path')}
-  ${c.cream('commitshow audit github.com/owner/repo')}    ${c.dim('# remote shorthand')}
-  ${c.cream('commitshow audit https://github.com/o/r')}   ${c.dim('# full URL')}
-  ${c.cream('commitshow audit owner/repo')}               ${c.dim('# last-ditch shorthand')}
+  ${c.cream('commitshow audit')}                                  ${c.dim('# cwd · git remote origin')}
+  ${c.cream('commitshow audit ./my-repo')}                        ${c.dim('# local path')}
+  ${c.cream('commitshow audit github.com/owner/repo')}            ${c.dim('# remote shorthand')}
+  ${c.cream('commitshow audit https://github.com/o/r')}           ${c.dim('# full URL')}
+  ${c.cream('commitshow audit owner/repo')}                       ${c.dim('# last-ditch shorthand')}
+
+${c.muted('MONOREPO TARGETS')}  ${c.dim('(all three forms produce the same audit)')}
+  ${c.cream('commitshow audit github.com/o/r --workspace apps/web')}     ${c.dim('# explicit flag')}
+  ${c.cream('commitshow audit github.com/o/r/apps/web')}                 ${c.dim('# inline path')}
+  ${c.cream('commitshow audit https://github.com/o/r/tree/main/apps/web')} ${c.dim('# paste a GitHub browse URL')}
 
 ${c.muted('FOR AGENTS')}
   ${c.cream('commitshow audit github.com/owner/repo --json | jq .concerns')}

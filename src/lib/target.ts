@@ -2,12 +2,19 @@
 // { kind: 'remote-url', github_url } or { kind: 'local', path, github_url? }.
 //
 // Accepted inputs (all resolve to a GitHub HTTPS URL):
-//   · (omitted)                         → cwd · read `git remote get-url origin`
-//   · ./my-repo · /abs/path             → local dir · same remote inference
-//   · github.com/owner/repo             → bare host shorthand
-//   · https://github.com/owner/repo     → full URL
-//   · git@github.com:owner/repo.git     → ssh form (common in `git remote`)
-//   · owner/repo                        → last-ditch shorthand (2 segments, no dot)
+//   · (omitted)                                       → cwd · read `git remote get-url origin`
+//   · ./my-repo · /abs/path                           → local dir · same remote inference
+//   · github.com/owner/repo                           → bare host shorthand
+//   · https://github.com/owner/repo                   → full URL
+//   · git@github.com:owner/repo.git                   → ssh form (common in `git remote`)
+//   · owner/repo                                      → last-ditch shorthand (2 segments, no dot)
+//   · github.com/owner/repo/apps/web                  → inline workspace (post-2026-05-06)
+//   · https://github.com/owner/repo/tree/main/apps/web → GitHub browse URL (paste-friendly)
+//
+// Workspace selection precedence:
+//   1. --workspace <path> CLI flag (highest · explicit override)
+//   2. Inline path in target URL (sub-path after <owner>/<repo>)
+//   3. Auto-pick on the server (Edge Function priority-name → repo-name → file count)
 
 import { execSync } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
@@ -21,6 +28,9 @@ export interface Target {
   localPath?: string
   /** owner/repo convenience */
   slug: string
+  /** Explicit workspace override (apps/web · packages/next · etc).
+   *  null = let the server auto-pick. */
+  workspace: string | null
 }
 
 export class TargetError extends Error {}
@@ -57,21 +67,64 @@ export async function verifyRemoteExists(
   }
 }
 
-const GITHUB_URL_RE = /^https?:\/\/github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i
-const GITHUB_HOST_RE = /^github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i
-const GITHUB_SSH_RE = /^git@github\.com:([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i
-const SLUG_RE = /^([A-Za-z0-9][\w.-]*)\/([A-Za-z0-9][\w.-]*)$/
+// `github_url` patterns. Each captures (owner, repo, optional sub-path).
+// The sub-path lets users inline a workspace inside the URL itself instead
+// of using the --workspace flag (`github.com/o/r/apps/web` or paste of a
+// GitHub browse URL `https://github.com/o/r/tree/main/apps/web`).
+const GITHUB_URL_RE  = /^https?:\/\/github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?(?:\/(.+))?\/?$/i
+const GITHUB_HOST_RE = /^github\.com\/([^/\s]+)\/([^/\s]+?)(?:\.git)?(?:\/(.+))?\/?$/i
+const GITHUB_SSH_RE  = /^git@github\.com:([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i
+const SLUG_RE        = /^([A-Za-z0-9][\w.-]*)\/([A-Za-z0-9][\w.-]*)$/
 
 function canonical(owner: string, repo: string): string {
   return `https://github.com/${owner}/${repo.replace(/\.git$/, '')}`
 }
 
-function matchUrl(raw: string): { owner: string; repo: string } | null {
+/**
+ * Normalize the sub-path portion of a GitHub URL into a workspace path.
+ * Handles the GitHub browse URL prefixes (`tree/<branch>/...` ·
+ * `blob/<branch>/...`) so users can paste any URL they're looking at.
+ *
+ * Rejects non-workspace prefixes (issues · pulls · actions · settings ·
+ * releases · wiki · etc.) — those aren't workspaces, returning null
+ * means "no inline workspace" rather than a confusing error.
+ */
+function normalizeSubpath(raw: string | undefined | null): string | null {
+  if (!raw) return null
+  let s = raw.replace(/^\/+/, '').replace(/\/+$/, '')
+  if (!s) return null
+  // GitHub browse URL prefixes — strip and keep the path part
+  const browseMatch = s.match(/^(?:tree|blob)\/[^/]+\/(.+)$/i)
+  if (browseMatch) s = browseMatch[1]
+  // Non-workspace GitHub URL prefixes — ignore the sub-path entirely
+  const NON_WORKSPACE_PREFIXES = [
+    'issues', 'pull', 'pulls', 'actions', 'settings', 'releases',
+    'wiki', 'security', 'pulse', 'graphs', 'network', 'commits',
+    'commit', 'compare', 'tags', 'branches', 'discussions', 'projects',
+  ]
+  const head = s.split('/')[0].toLowerCase()
+  if (NON_WORKSPACE_PREFIXES.includes(head)) return null
+  return s
+}
+
+function matchUrl(raw: string): { owner: string; repo: string; workspace: string | null } | null {
   const s = raw.trim()
-  const urlMatch = s.match(GITHUB_URL_RE) ?? s.match(GITHUB_HOST_RE) ?? s.match(GITHUB_SSH_RE)
-  if (urlMatch) return { owner: urlMatch[1], repo: urlMatch[2] }
+  const urlMatch = s.match(GITHUB_URL_RE) ?? s.match(GITHUB_HOST_RE)
+  if (urlMatch) {
+    return {
+      owner:     urlMatch[1],
+      repo:      urlMatch[2],
+      workspace: normalizeSubpath(urlMatch[3]),
+    }
+  }
+  const sshMatch = s.match(GITHUB_SSH_RE)
+  if (sshMatch) {
+    return { owner: sshMatch[1], repo: sshMatch[2], workspace: null }
+  }
   const slug = s.match(SLUG_RE)
-  if (slug && !slug[2].includes('.')) return { owner: slug[1], repo: slug[2] }
+  if (slug && !slug[2].includes('.')) {
+    return { owner: slug[1], repo: slug[2], workspace: null }
+  }
   return null
 }
 
@@ -91,7 +144,15 @@ function gitRemoteOrigin(cwd: string): string | null {
   }
 }
 
-export function resolveTarget(rawArg: string | undefined): Target {
+export function resolveTarget(
+  rawArg: string | undefined,
+  opts: { workspace?: string | null } = {},
+): Target {
+  // Workspace precedence: --workspace flag wins over inline URL path.
+  // Both normalized through the same path so the server receives a
+  // single shape.
+  const flagWorkspace = normalizeSubpath(opts.workspace ?? null)
+
   // 1 · Explicit URL forms
   if (rawArg) {
     const m = matchUrl(rawArg)
@@ -100,6 +161,7 @@ export function resolveTarget(rawArg: string | undefined): Target {
         kind: 'remote-url',
         github_url: canonical(m.owner, m.repo),
         slug: `${m.owner}/${m.repo.replace(/\.git$/, '')}`,
+        workspace: flagWorkspace ?? m.workspace ?? null,
       }
     }
   }
@@ -137,5 +199,6 @@ export function resolveTarget(rawArg: string | undefined): Target {
     github_url: canonical(m.owner, m.repo),
     localPath: path,
     slug: `${m.owner}/${m.repo.replace(/\.git$/, '')}`,
+    workspace: flagWorkspace,    // local repos don't carry an inline URL workspace
   }
 }

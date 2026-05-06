@@ -237,7 +237,7 @@ export interface PreviewError {
 export async function runPreviewAudit(
   githubUrl: string,
   liveUrl?: string,
-  opts: { force?: boolean; source?: string | null } = {},
+  opts: { force?: boolean; source?: string | null; workspace?: string | null } = {},
 ): Promise<PreviewEnvelope | PreviewPending | PreviewError> {
   const res = await fetch(`${baseUrl()}/functions/v1/audit-preview`, {
     method: 'POST',
@@ -247,6 +247,10 @@ export async function runPreviewAudit(
       live_url:   liveUrl,
       force:      opts.force === true,
       source:     opts.source ?? null,
+      // Workspace = explicit override of the server's monorepo auto-pick.
+      // null/undefined = let the server pick (default); a path like
+      // 'apps/web' = audit only that workspace.
+      workspace:  opts.workspace ?? null,
     }),
   })
   const body = await res.json().catch(() => ({ error: 'invalid_json' }))

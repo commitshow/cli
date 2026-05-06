@@ -32,11 +32,27 @@ export async function audit(args: string[]): Promise<number> {
                   ?? (sourceIdx >= 0 ? args[sourceIdx + 1] : undefined)
                   ?? process.env.COMMITSHOW_SOURCE
                   ?? null
-  const positional = args.find(a => !a.startsWith('--') && a !== sourceFlag)
+
+  // --workspace <path> · explicit override of the server-side auto-pick
+  // for monorepo audits. Both --workspace=apps/web and --workspace apps/web
+  // forms accepted. Passes through to the Edge Function as `workspace`
+  // in the audit request body. Inline path inside the URL
+  // (`github.com/o/r/apps/web`) is the second-priority source — picked
+  // up by resolveTarget() if the flag isn't set.
+  const workspaceIdx = args.indexOf('--workspace')
+  const workspaceFlag = args.find(a => a.startsWith('--workspace='))?.split('=')[1]
+                     ?? (workspaceIdx >= 0 ? args[workspaceIdx + 1] : undefined)
+                     ?? null
+
+  const positional = args.find(a =>
+    !a.startsWith('--') &&
+    a !== sourceFlag &&
+    a !== workspaceFlag,
+  )
 
   let target
   try {
-    target = resolveTarget(positional)
+    target = resolveTarget(positional, { workspace: workspaceFlag })
   } catch (err) {
     if (err instanceof TargetError) {
       emitError(asJson, 'bad_target', err.message, positional)
@@ -159,7 +175,11 @@ export async function audit(args: string[]): Promise<number> {
     else       console.log(c.dim('First time on commit.show for this repo — running a preview audit…'))
   }
 
-  const result = await runPreviewAudit(target.github_url, undefined, { force, source: sourceFlag })
+  const result = await runPreviewAudit(target.github_url, undefined, {
+    force,
+    source:    sourceFlag,
+    workspace: target.workspace,
+  })
 
   // Error envelope
   if ('error' in result) {
