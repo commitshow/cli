@@ -11,6 +11,7 @@ import {
 } from '../lib/render.js'
 import { c } from '../lib/colors.js'
 import { Spinner } from '../lib/spinner.js'
+import { maybeOfferCi } from '../lib/ci-prompt.js'
 
 export async function audit(args: string[]): Promise<number> {
   const asJson = args.includes('--json')
@@ -141,6 +142,12 @@ export async function audit(args: string[]): Promise<number> {
         if (mdPath)   console.log(c.dim(`  Saved → ${mdPath}`))
         if (jsonPath) console.log(c.dim(`  Saved → ${jsonPath}`))
       }
+      // Post-audit CI nudge · only in interactive non-JSON mode.
+      // Skipped silently if not in a git repo / no GitHub remote /
+      // workflow already exists.
+      if (!asJson && target.localPath) {
+        await maybeOfferCi(target.localPath)
+      }
     }
     return 0
   }
@@ -265,6 +272,10 @@ export async function audit(args: string[]): Promise<number> {
     if (!asJson) {
       if (mdPath)   console.log(c.dim(`  Saved → ${mdPath}`))
       if (jsonPath) console.log(c.dim(`  Saved → ${jsonPath}`))
+    }
+    // Post-audit CI nudge · only in interactive non-JSON mode.
+    if (!asJson && target.localPath) {
+      await maybeOfferCi(target.localPath)
     }
   }
   return 0
