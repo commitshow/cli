@@ -7,6 +7,7 @@ import { install } from './commands/install.js'
 import { status }  from './commands/status.js'
 import { login }   from './commands/login.js'
 import { whoami }  from './commands/whoami.js'
+import { extract } from './commands/extract.js'
 import { c } from './lib/colors.js'
 import { checkLatestVersion, formatUpdateBanner } from './lib/version-check.js'
 
@@ -36,6 +37,7 @@ ${c.muted('COMMANDS')}
   ${c.gold('status')}   [target]    latest score, no re-run
   ${c.gold('submit')}   [target]    audition a project (requires login · coming soon)
   ${c.gold('install')}  <slug>      install a library pack (e.g. supabase-resend-auth)
+  ${c.gold('extract')}              token receipt for your audition (Claude Code sessions → blob)
   ${c.gold('login')}                device-flow sign-in (coming soon)
   ${c.gold('whoami')}                who am I signed in as
 
@@ -81,6 +83,7 @@ export async function main(argv: string[]): Promise<void> {
       case 'install': code = await install(rest); break
       case 'login':   code = await login(rest);   break
       case 'whoami':  code = await whoami(rest);  break
+      case 'extract': code = await extract(rest); break
       case '-v':
       case '--version':
         console.log(VERSION); code = 0; break
