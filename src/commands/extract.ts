@@ -133,21 +133,34 @@ function copyToClipboard(text: string): boolean {
 export async function extract(args: string[]): Promise<number> {
   const asJson = args.includes('--json')
   const positional = args.find(a => !a.startsWith('--'))
-  let target
+
+  // Unlike `audit`, extract doesn't NEED a GitHub URL — it just scans
+  // ~/.claude/projects/<encoded-cwd>/*.jsonl for token usage. github_url
+  // is purely optional metadata in the blob (helps the server match the
+  // receipt back to the right project on commit.show). So we try to
+  // resolve a target but fall back to a cwd-only target when there's no
+  // git remote — instead of bailing with audit's "No git remote" error.
+  let target: { github_url: string | null; localPath?: string } | null = null
   try {
     target = resolveTarget(positional, { workspace: null })
   } catch (e) {
     if (e instanceof TargetError) {
-      console.error(c.scarlet(e.message))
-      return 1
+      // Treat as 'no github_url' rather than fatal · scan still works.
+      target = { github_url: null, localPath: positional ? positional : process.cwd() }
+    } else {
+      throw e
     }
-    throw e
   }
 
   if (!asJson) {
     console.log()
     console.log(HEADER)
     console.log()
+    if (!target.github_url) {
+      console.log(c.muted(`  no git remote detected · receipt will scan local Claude Code sessions only`))
+      console.log(c.muted(`  paste the blob into your project's audition form on commit.show — that's where it gets matched`))
+      console.log()
+    }
   }
 
   // Use the local cwd (or the path target) as the lookup key. Remote URL
