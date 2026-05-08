@@ -232,12 +232,16 @@ export interface PreviewPending {
 }
 
 export interface PreviewError {
-  error:    string
-  reason?:  'ip_cap' | 'url_cap' | 'global_cap'
-  message?: string
-  limit?:   number
-  count?:   number
-  quota?:   QuotaSnapshot
+  error:      string
+  reason?:    'ip_cap' | 'url_cap' | 'global_cap' | 'private_or_missing' | 'rate_limited'
+  message?:   string
+  limit?:     number
+  count?:     number
+  quota?:     QuotaSnapshot
+  // 'github_inaccessible' carries these two for the friendly render.
+  slug?:      string
+  github_url?: string
+  hints?:     string[]
 }
 
 /** Kicks off (or returns cached) a preview audit. 202 → poll; 200 → done.

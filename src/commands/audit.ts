@@ -184,6 +184,40 @@ export async function audit(args: string[]): Promise<number> {
   // Error envelope
   if ('error' in result) {
     const err = result as PreviewError
+
+    // Friendly path for the most common CLI miss: trying to audit a
+    // private/missing/typo'd repo. Used to silently produce a 'ghost
+    // repo' snapshot scored 4 — confusing because users assumed their
+    // project actually scored that. Server now bails early with a
+    // dedicated envelope; we render a clear panel instead of a score.
+    if (err.error === 'github_inaccessible') {
+      if (asJson) {
+        process.stdout.write(JSON.stringify({
+          error:      'github_inaccessible',
+          reason:     err.reason,
+          slug:       err.slug,
+          github_url: err.github_url,
+          message:    err.message,
+          hints:      err.hints,
+          target:     target.github_url,
+        }) + '\n')
+      } else {
+        console.error('')
+        console.error(`  ${c.scarlet('✗')} ${c.bold(c.cream("Couldn't reach"))} ${c.gold(err.slug ?? target.github_url)}`)
+        console.error('')
+        console.error(`  ${c.muted(err.message ?? "We can't see this repo.")}`)
+        console.error('')
+        if (err.hints && err.hints.length > 0) {
+          console.error(`  ${c.muted('common causes:')}`)
+          for (const hint of err.hints) {
+            console.error(`    ${c.gold('·')} ${c.muted(hint)}`)
+          }
+          console.error('')
+        }
+      }
+      return 1
+    }
+
     if (err.error === 'rate_limited') {
       if (asJson) {
         process.stdout.write(JSON.stringify({
@@ -197,8 +231,13 @@ export async function audit(args: string[]): Promise<number> {
         }) + '\n')
       } else {
         console.error('')
+        // err.reason can include non-cap values (e.g. private_or_missing)
+        // since PreviewError unions all reasons; renderRateLimitDeny only
+        // accepts the cap variants — narrow the input before passing.
+        const capReason: 'ip_cap' | 'url_cap' | 'global_cap' =
+          err.reason === 'url_cap' || err.reason === 'global_cap' ? err.reason : 'ip_cap'
         console.error(renderRateLimitDeny({
-          reason:  err.reason ?? 'ip_cap',
+          reason:  capReason,
           message: err.message ?? 'Rate limit hit. Try again later.',
           limit:   err.limit ?? 0,
           count:   err.count ?? 0,
