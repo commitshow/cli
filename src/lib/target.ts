@@ -1,17 +1,21 @@
 // Target detection — turns the CLI positional arg into a canonical
-// { kind: 'remote-url', github_url } or { kind: 'local', path, github_url? }.
+// { kind: 'remote-url', github_url } or { kind: 'local', path, github_url? }
+// or { kind: 'site-url', site_url } (§15-E URL fast lane).
 //
-// Accepted inputs (all resolve to a GitHub HTTPS URL):
+// Accepted inputs:
 //   · (omitted)                                       → cwd · read `git remote get-url origin`
 //   · ./my-repo · /abs/path                           → local dir · same remote inference
 //   · github.com/owner/repo                           → bare host shorthand
 //   · https://github.com/owner/repo                   → full URL
 //   · git@github.com:owner/repo.git                   → ssh form (common in `git remote`)
 //   · owner/repo                                      → last-ditch shorthand (2 segments, no dot)
-//   · github.com/owner/repo/apps/web                  → inline workspace (post-2026-05-06)
+//   · github.com/owner/repo/apps/web                  → inline workspace
 //   · https://github.com/owner/repo/tree/main/apps/web → GitHub browse URL (paste-friendly)
+//   · yoursite.com  /  https://yoursite.com           → site URL (§15-E URL Fast Lane · NEW)
+//                                                       routes to audit-site-preview ·
+//                                                       partial cap ~32/50 · no repo needed
 //
-// Workspace selection precedence:
+// Workspace selection precedence (repo lanes only):
 //   1. --workspace <path> CLI flag (highest · explicit override)
 //   2. Inline path in target URL (sub-path after <owner>/<repo>)
 //   3. Auto-pick on the server (Edge Function priority-name → repo-name → file count)
@@ -21,15 +25,18 @@ import { existsSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 export interface Target {
-  kind: 'remote-url' | 'local'
-  /** Canonical https://github.com/owner/repo — no trailing slash, no .git */
+  kind: 'remote-url' | 'local' | 'site-url'
+  /** Canonical https://github.com/owner/repo — no trailing slash, no .git.
+   *  EMPTY string for site-url targets (no repo). */
   github_url: string
+  /** Only set when kind === 'site-url' · canonical https://host (no path). */
+  site_url?: string
   /** Only set when kind === 'local' */
   localPath?: string
-  /** owner/repo convenience */
+  /** owner/repo for repo lanes · bare host for site-url lane */
   slug: string
-  /** Explicit workspace override (apps/web · packages/next · etc).
-   *  null = let the server auto-pick. */
+  /** Explicit workspace override (repo lanes only).
+   *  null = let the server auto-pick. site-url lane ignores this. */
   workspace: string | null
 }
 
@@ -128,6 +135,34 @@ function matchUrl(raw: string): { owner: string; repo: string; workspace: string
   return null
 }
 
+// Site URL detection (§15-E URL Fast Lane).
+// Accepts:
+//   · https://example.com  / http://example.com         → full URL
+//   · example.com  / sub.example.com                    → bare host (added https://)
+//   · example.com/path                                  → host + path · we strip path (origin only)
+// Rejects:
+//   · github.com URLs (those go to remote-url path · matchUrl above)
+//   · localhost / private IPs / 1-segment hosts (no dot)
+//   · commit.show itself (reflexive)
+function matchSiteUrl(raw: string): { origin: string; host: string } | null {
+  const s = raw.trim()
+  if (!s) return null
+  // owner/repo shorthand has no dot in the second segment — handled by matchUrl.
+  // Anything reaching here that contains "github.com" is a github form we already
+  // tried · don't double-route.
+  if (/github\.com/i.test(s)) return null
+  const candidate = /^https?:\/\//i.test(s) ? s : `https://${s}`
+  let u: URL
+  try { u = new URL(candidate) }
+  catch { return null }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
+  const host = u.host.toLowerCase().replace(/^www\./, '')
+  if (!host.includes('.')) return null                                    // localhost · single-label hosts
+  if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) return null
+  if (host === 'commit.show' || host.endsWith('.commit.show')) return null
+  return { origin: `${u.protocol}//${host}`, host }
+}
+
 function gitRemoteOrigin(cwd: string): string | null {
   try {
     const out = execSync('git remote get-url origin', {
@@ -153,7 +188,7 @@ export function resolveTarget(
   // single shape.
   const flagWorkspace = normalizeSubpath(opts.workspace ?? null)
 
-  // 1 · Explicit URL forms
+  // 1 · Explicit URL forms — github first (most common · most specific)
   if (rawArg) {
     const m = matchUrl(rawArg)
     if (m) {
@@ -162,6 +197,18 @@ export function resolveTarget(
         github_url: canonical(m.owner, m.repo),
         slug: `${m.owner}/${m.repo.replace(/\.git$/, '')}`,
         workspace: flagWorkspace ?? m.workspace ?? null,
+      }
+    }
+    // 1b · Site URL fast lane (§15-E) — anything URL-shaped that isn't
+    //      github.com / a local path. Routes to audit-site-preview.
+    const site = matchSiteUrl(rawArg)
+    if (site) {
+      return {
+        kind: 'site-url',
+        github_url: '',
+        site_url: site.origin,
+        slug: site.host,
+        workspace: null,
       }
     }
   }

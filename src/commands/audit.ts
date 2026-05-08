@@ -1,7 +1,7 @@
 import { resolveTarget, verifyRemoteExists, TargetError } from '../lib/target.js'
 import {
   findProjectByGithubUrl, fetchLatestSnapshot, fetchStanding,
-  runPreviewAudit, waitForPreviewSnapshot,
+  runPreviewAudit, runSiteFastLaneAudit, waitForPreviewSnapshot,
   type PreviewEnvelope, type PreviewError, type PreviewPending,
 } from '../lib/api.js'
 import {
@@ -59,6 +59,14 @@ export async function audit(args: string[]): Promise<number> {
       return 2
     }
     throw err
+  }
+
+  // §15-E URL Fast Lane · short-circuit before the github-specific
+  // verifyRemoteExists / findProjectByGithubUrl path. The site-url lane
+  // has its own Edge Function (audit-site-preview) and identifies projects
+  // by live_url, not github_url, so the cached-flow lookup wouldn't apply.
+  if (target.kind === 'site-url') {
+    return await runSiteAudit(target as { kind: 'site-url'; site_url?: string; slug: string; github_url: string }, { force, sourceFlag, asJson })
   }
 
   // Pre-flight: when the user pointed at a remote URL (or owner/repo
@@ -346,4 +354,107 @@ function emitError(asJson: boolean, code: string, message: string, target?: stri
   } else {
     console.error(c.scarlet(message))
   }
+}
+
+// §15-E URL Fast Lane CLI handler. Mirrors the runPreviewAudit branch
+// of the main flow but routes to audit-site-preview and uses live_url
+// as the project identifier instead of github_url.
+//
+// On success: renders the same audit panel with the URL lane upsell —
+// the only delta vs the repo lane is partial-cap framing in the upsell
+// copy, handled by renderUpsell when github_url is empty.
+async function runSiteAudit(
+  target: { kind: 'site-url'; site_url?: string; slug: string; github_url: string },
+  opts: { force: boolean; sourceFlag: string | null; asJson: boolean },
+): Promise<number> {
+  const { force, sourceFlag, asJson } = opts
+  if (!target.site_url) {
+    emitError(asJson, 'bad_target', 'Site URL missing — internal target resolution issue.', target.slug)
+    return 2
+  }
+
+  if (!asJson) {
+    if (force) console.log(c.dim(`Refreshing URL audit for ${target.slug}…`))
+    else       console.log(c.dim(`Auditing ${target.slug} (URL fast lane · partial)…`))
+  }
+
+  const result = await runSiteFastLaneAudit(target.site_url, { force, source: sourceFlag })
+
+  if ('error' in result) {
+    const err = result as PreviewError
+    if (err.error === 'rate_limited' && err.quota) {
+      const reason = (err.reason ?? 'ip_cap') as 'ip_cap' | 'url_cap' | 'global_cap'
+      // Map server's domain_cap onto url_cap for renderRateLimitDeny (same shape).
+      const capReason: 'ip_cap' | 'url_cap' | 'global_cap' =
+        reason === 'ip_cap' ? 'ip_cap' : reason === 'global_cap' ? 'global_cap' : 'url_cap'
+      if (asJson) {
+        process.stdout.write(JSON.stringify({
+          error: 'rate_limited', reason: capReason,
+          message: err.message ?? 'Rate limit hit.',
+          quota: err.quota,
+        }) + '\n')
+      } else {
+        console.error('')
+        console.error(renderRateLimitDeny({
+          reason: capReason,
+          message: err.message ?? 'Rate limit hit. Try again later.',
+          limit: err.limit ?? 0,
+          count: err.count ?? 0,
+          quota: err.quota,
+        }))
+        console.error('')
+      }
+      return 1
+    }
+    if (err.error === 'domain_opted_out') {
+      emitError(asJson, 'domain_opted_out',
+        err.message ?? `${target.slug} declined audits via DNS TXT.`,
+        target.site_url)
+      return 1
+    }
+    emitError(asJson, err.error ?? 'site_audit_failed', err.message ?? 'URL audit failed.', target.site_url)
+    return 1
+  }
+
+  let envelope: PreviewEnvelope
+  if ('status' in result && result.status === 'running') {
+    const pending = result as PreviewPending
+    const spinner = new Spinner()
+    if (!asJson) spinner.start(`Auditing ${target.slug}`)
+    let waited
+    try {
+      waited = await waitForPreviewSnapshot(pending.project_id, null)
+    } finally { spinner.stop() }
+    if (!waited) {
+      emitError(asJson, 'timeout', 'URL audit is taking longer than expected. Refresh in a minute.', target.site_url)
+      return 1
+    }
+    envelope = { ...waited, quota: pending.quota }
+  } else {
+    envelope = result as PreviewEnvelope
+  }
+
+  const view = { project: envelope.project, snapshot: envelope.snapshot, standing: null }
+
+  if (asJson) {
+    const shape = JSON.parse(renderJson(view))
+    if (envelope.quota) shape.quota = envelope.quota
+    shape.audit_kind = 'url_fast_lane'
+    process.stdout.write(JSON.stringify(shape, null, 2) + '\n')
+  } else {
+    console.log('')
+    console.log(renderAudit(view))
+    console.log('')
+    if (envelope.quota) {
+      console.log(renderQuotaFooter(envelope.quota))
+      console.log('')
+    }
+    // Custom upsell · partial-cap framing
+    console.log(c.dim(
+      `  ${c.gold('partial audit')} · the engine couldn't see your repo signals (tests · CI · LICENSE · brief).\n` +
+      `  Push past the URL ceiling: ${c.cream('commit.show/submit')} with your repo.`
+    ))
+    console.log('')
+  }
+  return 0
 }

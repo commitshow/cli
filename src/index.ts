@@ -52,6 +52,8 @@ ${c.muted('TARGET FORMS')}  ${c.dim('(default: cwd)')}
   ${c.cream('commitshow audit github.com/owner/repo')}            ${c.dim('# remote shorthand')}
   ${c.cream('commitshow audit https://github.com/o/r')}           ${c.dim('# full URL')}
   ${c.cream('commitshow audit owner/repo')}                       ${c.dim('# last-ditch shorthand')}
+  ${c.cream('commitshow audit yoursite.com')}                     ${c.dim('# URL Fast Lane · partial audit · no repo needed')}
+  ${c.cream('commitshow audit https://yoursite.com')}             ${c.dim('# same · full URL form')}
 
 ${c.muted('MONOREPO TARGETS')}  ${c.dim('(all three forms produce the same audit)')}
   ${c.cream('commitshow audit github.com/o/r --workspace apps/web')}     ${c.dim('# explicit flag')}

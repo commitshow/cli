@@ -272,6 +272,28 @@ export async function runPreviewAudit(
   return body as PreviewEnvelope
 }
 
+/** §15-E URL Fast Lane · sister of runPreviewAudit. Kicks off audit on a
+ *  deployed site URL (no repo). Server returns 202 + project_id like
+ *  audit-preview · same poller (waitForPreviewSnapshot) handles the wait. */
+export async function runSiteFastLaneAudit(
+  siteUrl: string,
+  opts: { force?: boolean; source?: string | null } = {},
+): Promise<PreviewEnvelope | PreviewPending | PreviewError> {
+  const res = await fetch(`${baseUrl()}/functions/v1/audit-site-preview`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({
+      site_url: siteUrl,
+      force:    opts.force === true,
+      source:   opts.source ?? null,
+    }),
+  })
+  const body = await res.json().catch(() => ({ error: 'invalid_json' }))
+  if (res.status === 202) return body as PreviewPending
+  if (!res.ok) return body as PreviewError
+  return body as PreviewEnvelope
+}
+
 /** Poll a preview job until the snapshot lands or we time out.
  *
  *  `since` (ISO timestamp) is the baseline we wait past. For an INITIAL audit
