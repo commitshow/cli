@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "commitshow": {
+      "command": "npx",
+      "args": ["-y", "commitshow-mcp"]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "commitshow",
+  "displayName": "commit.show audit",
+  "version": "0.1.1",
+  "description": "Score any public GitHub repo 0-100 against the commit.show audit rubric — Lighthouse, repo signals, security, surfaced as paste-ready markdown inside Cursor.",
+  "author": {
+    "name": "commit.show",
+    "email": "han@commit.show"
+  },
+  "homepage": "https://commit.show",
+  "repository": "https://github.com/commitshow/cli",
+  "license": "MIT",
+  "keywords": [
+    "audit",
+    "code-quality",
+    "lighthouse",
+    "github",
+    "vibe-coding",
+    "mcp",
+    "claude",
+    "cursor"
+  ],
+  "category": "developer-tools",
+  "tags": [
+    "audit",
+    "code-quality",
+    "github",
+    "vibe-coding"
+  ],
+  "mcp": "./mcp.json"
+}
