@@ -1,0 +1,89 @@
+# Publish commitshow-mcp to npm + the Anthropic MCP Registry on
+# every `mcp-v*` tag push. Tag format is `mcp-v0.1.2` (CLI tags use
+# `v*` separately so they don't collide).
+#
+# Auth model:
+#   · npm   — needs an automation token in the repo's NPM_TOKEN
+#             secret (one-time setup; npm token create --type=automation)
+#   · MCP   — OIDC, no secret. The `id-token: write` permission below
+#             lets `mcp-publisher login github-oidc` exchange the
+#             workflow's OIDC credential for a registry JWT on the fly.
+#
+# Version sync: the workflow rewrites `mcp/package.json` and
+# `mcp/server.json` to match the tag, so a single `git tag mcp-v0.1.2
+# && git push --tags` drives both publishes from one source of truth.
+
+name: Publish MCP server
+
+on:
+  push:
+    tags: ["mcp-v*"]
+  # Allow manual trigger from the Actions tab when something needs
+  # re-publishing without a fresh tag (e.g. registry data reset).
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.1.2)"
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "lts/*"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Resolve version (tag or input)
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            # tags/mcp-v0.1.2 → 0.1.2
+            echo "version=${GITHUB_REF#refs/tags/mcp-v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sync version into package.json + server.json
+        working-directory: mcp
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          jq --arg v "$V" '.version = $v' package.json > package.tmp && mv package.tmp package.json
+          jq --arg v "$V" '.version = $v | .packages[0].version = $v' server.json > server.tmp && mv server.tmp server.json
+          echo "Synced both to v$V"
+
+      - name: Install + build
+        working-directory: mcp
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish to npm
+        working-directory: mcp
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install mcp-publisher
+        run: |
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_${OS}_${ARCH}.tar.gz" \
+            | tar xz mcp-publisher
+          sudo mv mcp-publisher /usr/local/bin/
+          mcp-publisher --help
+
+      - name: Authenticate to MCP Registry (OIDC)
+        working-directory: mcp
+        run: mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        working-directory: mcp
+        run: mcp-publisher publish
