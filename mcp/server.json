@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.commitshow/audit",
+  "description": "Audit any public GitHub repo from inside Claude Desktop, Cursor, Cline, or Windsurf — score it 0-100 against the published commit.show rubric, return strengths + concerns + Lighthouse + repo signals as paste-ready markdown.",
+  "repository": {
+    "url": "https://github.com/commitshow/cli",
+    "source": "github",
+    "subfolder": "mcp"
+  },
+  "version": "0.1.1",
+  "websiteUrl": "https://commit.show",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "commitshow-mcp",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

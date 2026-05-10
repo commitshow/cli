@@ -1,6 +1,7 @@
 {
   "name": "commitshow-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "mcpName": "io.github.commitshow/audit",
   "description": "MCP server for commit.show — let Claude Desktop / Cursor / Cline / Windsurf audit any public GitHub repo through the Model Context Protocol.",
   "type": "module",
   "bin": {
