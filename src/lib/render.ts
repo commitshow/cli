@@ -1280,11 +1280,17 @@ export function renderAuditError(err: AuditErrorInput, projectName?: string, pro
 // audits they have left today and when the bucket resets.
 
 export interface QuotaTierInput { count: number; limit: number; remaining: number }
+// Server-side path / type:
+//   · GitHub-repo audits (audit-preview)    return quota.url
+//   · Site-URL audits     (audit-site-preview) return quota.domain
+// Same shape, different key name. Renderer normalizes via the
+// `repoOrDomain` getter below so callers don't have to remember.
 export interface QuotaInput {
   reset_at: string
-  ip:     QuotaTierInput & { tier: 'anon' | 'authed' }
-  url:    QuotaTierInput
-  global: QuotaTierInput
+  ip:       QuotaTierInput & { tier: 'anon' | 'authed' }
+  url?:     QuotaTierInput
+  domain?:  QuotaTierInput
+  global:   QuotaTierInput
 }
 
 function timeUntil(isoTarget: string): string {
@@ -1297,11 +1303,20 @@ function timeUntil(isoTarget: string): string {
 }
 
 export function renderQuotaFooter(q: QuotaInput): string {
+  // Normalize: GitHub lane returns q.url, Site lane returns q.domain.
+  // Server defends · client treats whichever exists as the "per-target"
+  // tier (label changes from 'repo' to 'site' to match the audit kind).
+  const perTarget = q.url ?? q.domain
+  const perTargetLabel = q.url ? 'repo' : 'site'
+  if (!perTarget) {
+    // Defensive · never reached if either url or domain is present.
+    return '  ' + c.muted(`quota: IP ${q.ip.remaining}/${q.ip.limit} · resets in ${timeUntil(q.reset_at)}`)
+  }
   // Pick the tier closest to its cap so the user sees the most relevant pressure.
   const tiers = [
-    { name: 'IP',     count: q.ip.count,     limit: q.ip.limit,     remaining: q.ip.remaining },
-    { name: 'repo',   count: q.url.count,    limit: q.url.limit,    remaining: q.url.remaining },
-    { name: 'global', count: q.global.count, limit: q.global.limit, remaining: q.global.remaining },
+    { name: 'IP',         count: q.ip.count,     limit: q.ip.limit,     remaining: q.ip.remaining },
+    { name: perTargetLabel, count: perTarget.count, limit: perTarget.limit, remaining: perTarget.remaining },
+    { name: 'global',     count: q.global.count, limit: q.global.limit, remaining: q.global.remaining },
   ]
   const tightest = tiers.slice().sort((a, b) => a.remaining - b.remaining)[0]
   const tone =
@@ -1310,11 +1325,11 @@ export function renderQuotaFooter(q: QuotaInput): string {
     c.muted
 
   const reset = timeUntil(q.reset_at)
-  const ipPart   = `IP ${q.ip.remaining}/${q.ip.limit}`
-  const urlPart  = `repo ${q.url.remaining}/${q.url.limit}`
+  const ipPart        = `IP ${q.ip.remaining}/${q.ip.limit}`
+  const perTargetPart = `${perTargetLabel} ${perTarget.remaining}/${perTarget.limit}`
   return '  ' + c.muted('quota: ') +
     tone(ipPart) + c.muted(' · ') +
-    tone(urlPart) + c.muted(' · ') +
+    tone(perTargetPart) + c.muted(' · ') +
     c.dim(`resets in ${reset}`)
 }
 
