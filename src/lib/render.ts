@@ -492,7 +492,15 @@ export function renderAudit(view: AuditView): string {
   // the calibrated total.
   const WALK_ON_AUDIT_MAX = 50
   const isWalkOn   = p.status === 'preview'
-  const total = p.score_total ?? 0
+  // Prefer snapshot.score_total over project.score_total — defensive
+  // against the analyze-project claim-lock race (the lock stamps
+  // projects.last_analysis_at BEFORE the audit body runs · during that
+  // window project.score_total is still the 0 default while a freshly
+  // landed snapshot already carries the real number). The api.ts
+  // poller's race guard also ensures snapshot exists, but rendering
+  // also prefers snapshot here so any future call site that reads a
+  // fresh envelope without the guard still gets the truth.
+  const total = snapshot?.score_total ?? p.score_total ?? 0
 
   const lines: string[] = []
 
@@ -768,7 +776,10 @@ export function renderAudit(view: AuditView): string {
   // — same visual frame for share screenshots.
   const lockedBar     = '─ audition unlocks ─'
   const auditDen      = isWalkOn ? WALK_ON_AUDIT_MAX : 50
-  const auditScoreClamp = Math.min(p.score_auto ?? 0, auditDen)
+  // Prefer snapshot.score_auto over project.score_auto — same claim-lock
+  // race rationale as the `total` line above.
+  const auditScore    = snapshot?.score_auto ?? p.score_auto ?? 0
+  const auditScoreClamp = Math.min(auditScore, auditDen)
   lines.push('  ' + `  Audit  ${pad(`${auditScoreClamp}/${auditDen}`, 7)}  ${scoreBar(auditScoreClamp, auditDen)}`)
   if (isWalkOn) {
     lines.push('  ' + `  Scout  ${pad('—/30', 7)}  ` + c.muted(lockedBar))
@@ -983,11 +994,18 @@ export function renderMarkdown(view: AuditView): string {
     lines.push('')
   }
 
-  lines.push(`## Score · ${p.score_total} / 100`)
+  // Prefer snapshot scores · race-safe vs analyze-project's claim-lock
+  // window where projects.score_* are still 0 while the snapshot already
+  // carries the real numbers. See renderAudit() comment block above.
+  const mdTotal     = snapshot?.score_total     ?? p.score_total
+  const mdAudit     = snapshot?.score_auto      ?? p.score_auto
+  const mdForecast  = snapshot?.score_forecast  ?? p.score_forecast
+  const mdCommunity = snapshot?.score_community ?? p.score_community
+  lines.push(`## Score · ${mdTotal} / 100`)
   lines.push('')
-  lines.push(`- Audit:      ${p.score_auto}/50`)
-  lines.push(`- Scout:      ${p.score_forecast}/30`)
-  lines.push(`- Community:  ${p.score_community}/20`)
+  lines.push(`- Audit:      ${mdAudit}/50`)
+  lines.push(`- Scout:      ${mdForecast}/30`)
+  lines.push(`- Community:  ${mdCommunity}/20`)
   if (delta != null && delta !== 0) {
     lines.push(`- **Δ ${delta > 0 ? '+' : ''}${delta}** since last audit`)
   }
@@ -1124,9 +1142,16 @@ export function toAgentShape(view: AuditView): AgentJsonShape {
   // pillar-only fallback (Brief slot excluded · base /45).
   const WALK_ON_AUDIT_MAX = 50
   const isWalkOn    = p.status === 'preview'
-  const walkOnTotal = isWalkOn ? (p.score_total ?? 0) : null
+  // Prefer snapshot scores · race-safe vs analyze-project's claim-lock
+  // window (see renderAudit comment). Snapshot carries the canonical
+  // numbers for this run · projects.score_* are denormalized later.
+  const jTotal     = snapshot?.score_total     ?? p.score_total
+  const jAudit     = snapshot?.score_auto      ?? p.score_auto
+  const jForecast  = snapshot?.score_forecast  ?? p.score_forecast
+  const jCommunity = snapshot?.score_community ?? p.score_community
+  const walkOnTotal = isWalkOn ? (jTotal ?? 0) : null
   const walkOnAuditNormalized = isWalkOn
-    ? Math.min(100, Math.round(((p.score_auto ?? 0) / WALK_ON_AUDIT_MAX) * 100))
+    ? Math.min(100, Math.round(((jAudit ?? 0) / WALK_ON_AUDIT_MAX) * 100))
     : null
   return {
     schema_version: '1',
@@ -1143,16 +1168,16 @@ export function toAgentShape(view: AuditView): AgentJsonShape {
     },
     score: {
       track:            isWalkOn ? 'walk_on' : 'league',
-      total:            p.score_total,
+      total:            jTotal,
       total_max:        100,
-      audit:            p.score_auto,
+      audit:            jAudit,
       audit_max:        50,
-      scout:            p.score_forecast,
+      scout:            jForecast,
       scout_max:        30,
-      community:        p.score_community,
+      community:        jCommunity,
       community_max:    20,
       delta_since_last: snapshot?.score_total_delta ?? null,
-      band:             bandFor(p.score_total),
+      band:             bandFor(jTotal ?? 0),
       walk_on_total:            walkOnTotal,
       walk_on_band:             walkOnTotal != null ? bandFor(walkOnTotal) : null,
       walk_on_audit_normalized: walkOnAuditNormalized,

@@ -319,12 +319,24 @@ export async function waitForPreviewSnapshot(
       // Otherwise require last_analysis_at to have advanced.
       if (sinceMs === 0 || lastMs > sinceMs) {
         const snapshot = await fetchLatestSnapshot(projectId)
-        return {
-          project,
-          snapshot,
-          standing: null,
-          is_preview: project.status === 'preview',
-          cache_hit: false,
+        // Race guard · analyze-project's concurrency claim-lock stamps
+        // projects.last_analysis_at = now() BEFORE the audit runs (see
+        // analyze-project line 4699+ · "datasette/2026-05-12 race"
+        // comment block · the lock serializes parallel audits). Without
+        // this guard the poll would return inside the claim-lock window
+        // with project.score_total = 0 (untouched initial) and
+        // snapshot = null · the user saw a 0/100 trophy on a fresh
+        // first-time audit. Wait for an actual snapshot whose
+        // created_at advances past the user's baseline.
+        const snapMs = snapshot?.created_at ? new Date(snapshot.created_at).getTime() : 0
+        if (snapshot && snapMs > sinceMs) {
+          return {
+            project,
+            snapshot,
+            standing: null,
+            is_preview: project.status === 'preview',
+            cache_hit: false,
+          }
         }
       }
     }
