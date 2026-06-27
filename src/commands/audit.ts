@@ -75,20 +75,14 @@ export async function audit(args: string[]): Promise<number> {
   // ('warp' → 'warpdotdev/warp' that doesn't exist) cleanly.
   if (target.kind === 'remote-url') {
     const check = await verifyRemoteExists(target.github_url)
-    if (!check.exists) {
-      emitError(
-        asJson,
-        'not_found',
-        `${target.slug} doesn't resolve on github.com (HTTP ${check.status ?? 'n/a'}).\n` +
-        `  Common causes:\n` +
-        `    · wrong owner spelling (try the canonical org slug)\n` +
-        `    · repo is private — commitshow only audits public ones\n` +
-        `    · repo was renamed or deleted\n` +
-        `  If you're an AI agent: ask the user for the canonical github.com URL,\n` +
-        `  don't guess from the project name.`,
-        target.github_url,
+    if (!check.exists && !asJson) {
+      // An unauthenticated HEAD can't see a PRIVATE repo — but it may be auditable if
+      // the commit.show Auditor GitHub App is installed on it. Don't hard-stop here;
+      // api.commit.show runs its own app-aware pre-flight and is the authority (it
+      // returns a clean not_found for a genuine typo without burning audit budget).
+      process.stderr.write(
+        `  ${target.slug} isn't public from here — trying via the commit.show Auditor app if it's installed…\n`,
       )
-      return 1
     }
   }
 
