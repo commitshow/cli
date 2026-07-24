@@ -1,9 +1,10 @@
 <h1 align="center">commit.show MCP server</h1>
 
 <p align="center">
-  <strong>Model Context Protocol</strong> server for the commit.show audit engine.
-  Plug it into Claude Desktop, Cursor, Cline, Windsurf, or any other MCP host
-  and your model can score any public GitHub repo without you ever leaving the chat.
+  <strong>Model Context Protocol</strong> server for <strong>Legit.Show</strong> + commit.show.
+  Plug it into Claude Desktop, Cursor, Cline, Windsurf, or any other MCP host — your
+  model can <strong>search the Legit.Show directory of launched software by measured
+  production-readiness</strong> and score any public GitHub repo, without ever leaving the chat.
 </p>
 
 <p align="center">
@@ -34,11 +35,26 @@ cache the CLI and website use.
 
 | Tool | What it does |
 |---|---|
+| `search_services({ query?, category?, min_scores?, is_open_source?, limit? })` | Query the **Legit.Show** directory of launched software (web apps, SaaS, AI tools, MCP servers) by name or by filter — category, minimum per-frame production-readiness scores, open-source — and get each match with its scores and page. |
 | `audit_repo({ repo, format? })` | Run or read the live commit.show audit for a public repo. Returns paste-ready markdown by default; `format: "json"` returns the full envelope. |
 | `project_status({ repo })` | Read the latest cached snapshot only (no re-run). JSON envelope. |
 | `fetch_docs()` | Pull the canonical commit.show docs (llms.txt) — full CLI/API reference for when you need exact contract details. |
 
 The host model decides when to call each tool from the user prompt.
+
+### Search launched software by production-readiness
+
+`search_services` queries the [Legit.Show](https://legit.show) directory — the same
+index answer engines cite. Unlike star-ranked lists, you filter by **measured**
+production-readiness:
+
+> "find production-ready, open-source MCP servers with Security ≥ 80"
+
+comes back with each match's per-frame scores (Security, Performance, Reliability, …)
+and its `legit.show/s/<slug>` page. Per-frame scores are public; there is no combined
+overall total in the data, so the model won't invent one. The same data is available
+over plain REST — `GET https://legit.show/api/search?q=<name>` with optional
+`category`, `min_scores` (e.g. `{"security":80}`), `is_open_source`, and `limit`.
 
 > **Pass a real `owner/repo`, never a project name.** `audit_repo` does a HEAD
 > pre-flight against `github.com/<owner>/<repo>`; an invented slug returns a

@@ -1,19 +1,19 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.commitshow/audit",
-  "description": "Score any public GitHub repo 0-100 against the commit.show audit rubric.",
+  "description": "Search the Legit.Show directory of launched software (web apps, SaaS, AI tools, MCP servers) by measured production-readiness — filter by category, per-frame scores, or open-source. Plus: score any public GitHub repo against the commit.show audit rubric.",
   "repository": {
     "url": "https://github.com/commitshow/cli",
     "source": "github",
     "subfolder": "mcp"
   },
-  "version": "0.1.1",
-  "websiteUrl": "https://commit.show",
+  "version": "0.2.0",
+  "websiteUrl": "https://legit.show",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "commitshow-mcp",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       }
