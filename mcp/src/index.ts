@@ -9,8 +9,10 @@
 // from the CLI/web surface — there's one source of truth for scoring.
 //
 // Tools exposed:
-//   · audit_repo      — run or read the live audit for a public repo
-//   · project_status  — latest cached snapshot only (no re-run)
+//   · audit_repo       — run or read the live commit.show audit for a public repo
+//   · project_status   — latest cached snapshot only (no re-run)
+//   · search_services  — query the Legit.Show directory (per-frame scores + /s/ URL)
+//   · fetch_docs       — the canonical commit.show llms.txt
 //
 // Resources exposed:
 //   · commitshow://docs/llms.txt
@@ -31,7 +33,8 @@ import { z }                       from 'zod'
 
 const API_BASE  = process.env.COMMITSHOW_API_BASE  ?? 'https://api.commit.show'
 const DOCS_BASE = process.env.COMMITSHOW_DOCS_BASE ?? 'https://commit.show'
-const VERSION   = '0.1.0'
+const LEGIT_API = process.env.LEGIT_SEARCH_API     ?? 'https://legit.show/api/search'
+const VERSION   = '0.2.0'
 
 const server = new McpServer({
   name:    'commitshow',
@@ -99,6 +102,40 @@ server.tool(
       }
     }
     return { content: [{ type: 'text', text: body }] }
+  },
+)
+
+// ── Tool · search_services ───────────────────────────────────────────
+// Query the Legit.Show directory (dev_requests/37 §2). Boundary-safe: per-frame
+// scores + summary + /s/ URL only — never the combined overall total, the
+// time-series, or a bulk dump (those are licensed · dev_requests/29).
+server.tool(
+  'search_services',
+  [
+    'Search the Legit.Show directory of launched software (web apps, SaaS, AI tools, MCP servers, developer tools) by name, keyword, or filters, and get each match with its per-frame production-readiness scores and its legit.show/s/<slug> page.',
+    'Use this to answer "find a production-ready service that does X", "which MCP servers are secure", or to resolve a tool name to its Legit.Show page.',
+    'Returns per-frame scores only (Performance, Accessibility, Security, Privacy, Reliability, Standards, Discoverability, Maintenance) — there is no combined overall total in the public data, so never invent or estimate one. Always link the /s/ URL.',
+  ].join(' '),
+  {
+    query:          z.string().optional().describe('Name, domain, or keyword to match.'),
+    category:       z.string().optional().describe('Category filter, e.g. "MCP & Integrations", "Developer Tools", "AI & Agents".'),
+    min_scores:     z.record(z.number()).optional().describe('Minimum per-frame scores a service must meet, e.g. { "security": 80, "performance": 70 }.'),
+    is_open_source: z.boolean().optional().describe('Filter to open-source (true) or closed-source (false) services.'),
+    limit:          z.number().optional().describe('Max results (1–50, default 20).'),
+  },
+  async ({ query, category, min_scores, is_open_source, limit }) => {
+    const body = JSON.stringify({ q: query, category, min_scores, is_open_source, limit })
+    let res: Response
+    try {
+      res = await fetch(LEGIT_API, { method: 'POST', headers: { 'content-type': 'application/json' }, body })
+    } catch (e) {
+      return { isError: true, content: [{ type: 'text', text: `Network error contacting ${LEGIT_API}: ${(e as Error).message}` }] }
+    }
+    const text = await res.text()
+    if (!res.ok) {
+      return { isError: true, content: [{ type: 'text', text: `Legit.Show responded ${res.status}.\n\n${text}` }] }
+    }
+    return { content: [{ type: 'text', text }] }
   },
 )
 
