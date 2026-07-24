@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.commitshow/legitshow-search",
+  "description": "Search the Legit.Show directory of launched software (web apps, SaaS, AI tools, MCP servers) by measured production-readiness — filter by category, per-frame scores, or open-source. Each match returns its per-frame scores and legit.show page.",
+  "repository": {
+    "url": "https://github.com/commitshow/cli",
+    "source": "github",
+    "subfolder": "legitshow-mcp"
+  },
+  "version": "0.1.0",
+  "websiteUrl": "https://legit.show",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "legitshow-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

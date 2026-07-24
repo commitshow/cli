@@ -1,0 +1,56 @@
+{
+  "name": "legitshow-mcp",
+  "version": "0.1.0",
+  "mcpName": "io.github.commitshow/legitshow-search",
+  "description": "MCP server for Legit.Show — let Claude Desktop / Cursor / Cline / Windsurf search a directory of launched software (web apps, SaaS, AI tools, MCP servers) by measured production-readiness through the Model Context Protocol.",
+  "type": "module",
+  "bin": {
+    "legitshow-mcp": "./bin/legitshow-mcp.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p .",
+    "dev":   "tsc -p . --watch",
+    "prepare": "npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "claude-desktop",
+    "cursor",
+    "windsurf",
+    "cline",
+    "legit.show",
+    "software-directory",
+    "production-readiness",
+    "ai-agents",
+    "developer-tools"
+  ],
+  "author": "Legit.Show",
+  "license": "MIT",
+  "homepage": "https://legit.show",
+  "repository": {
+    "type": "git",
+    "url":  "https://github.com/commitshow/cli",
+    "directory": "legitshow-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/commitshow/cli/issues"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "typescript":  "^5.9.3"
+  }
+}
