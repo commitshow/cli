@@ -866,10 +866,15 @@ function vibeChecklistLines(vc: any): Array<{ key: string; status: VibeStatus; l
     }
   }
   // 5. Observability
+  // Three outcomes, matching the engine and the published methodology. The old
+  // two-branch version called every unreadable repo a failure and named the one
+  // file it used to read — accurate then, wrong once the engine started reading
+  // nine manifest kinds, platform config and CDN loader scripts.
   {
     const o = vc?.observability
     if (o?.detected) out.push({ key:'observability', status:'pass', label:'Error tracking', detail:o.libs.join(' · ') })
-    else out.push({ key:'observability', status:'fail', label:'Error tracking', detail:'no sentry / datadog / pino / winston / otel lib in package.json' })
+    else if (o && o.checked_sources === 0) out.push({ key:'observability', status:'na', label:'Error tracking', detail:'no manifest or platform config to read' })
+    else out.push({ key:'observability', status:'fail', label:'Error tracking', detail:'no error-tracking dependency or config declared in the public repo' })
   }
   // 6. Rate limiting
   {
@@ -878,7 +883,7 @@ function vibeChecklistLines(vc: any): Array<{ key: string; status: VibeStatus; l
       if (!r.has_api_routes) out.push({ key:'rate_limit', status:'na', label:'API rate limiting', detail:'no API routes detected' })
       else if (r.lib_detected) out.push({ key:'rate_limit', status:'pass', label:'API rate limiting', detail:r.lib_detected })
       else if (r.middleware_detected) out.push({ key:'rate_limit', status:'pass', label:'API rate limiting', detail:'custom middleware detected' })
-      else if (r.needs_attention) out.push({ key:'rate_limit', status:'fail', label:'API rate limiting', detail:'API routes · 0 rate-limit lib or middleware' })
+      else if (r.needs_attention) out.push({ key:'rate_limit', status:'fail', label:'Rate limiting', detail:'no rate-limiting library or gateway config declared in the public repo' })
     } else {
       out.push({ key:'rate_limit', status:'na', label:'API rate limiting', detail:'unknown' })
     }

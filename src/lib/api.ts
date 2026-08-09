@@ -121,8 +121,12 @@ export interface VibeConcerns {
   rls_gaps?:            { tables: number; policies: number; writable_table_signals: number; gap_estimate: number; has_rls_intent: boolean }
   secret_exposure?:     { client_violations: Array<{ file: string; pattern: string }>; total: number }
   db_indexes?:          { fk_columns_seen: number; indexes_seen: number; gap_estimate: number }
-  observability?:       { libs: string[]; detected: boolean }
-  rate_limit?:          { lib_detected: string | null; middleware_detected: boolean; has_api_routes: boolean; needs_attention: boolean }
+  // applicable / checked_sources come from the engine and were being discarded here,
+  // which is why the renderer had to re-derive a status it could not get right:
+  // with only { libs, detected } there is no way to tell "declared nothing" from
+  // "had nothing to read".
+  observability?:       { libs: string[]; detected: boolean; applicable?: boolean; detection_confidence?: 'low' | 'normal'; checked_subpackages?: number; checked_sources?: number }
+  rate_limit?:          { lib_detected: string | null; middleware_detected: boolean; has_api_routes: boolean; applicable?: boolean; detection_confidence?: 'low' | 'normal'; needs_attention: boolean }
   prompt_injection?:    { uses_ai_sdk: boolean; raw_input_to_prompt_files: string[]; suspicious: boolean }
 }
 

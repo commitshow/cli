@@ -47,7 +47,7 @@ npx commitshow@latest audit github.com/owner/repo
   │ AI Coder 7 Frames · what AI ships without              │
   │                                                        │
   │ ✕ Error tracking                                       │
-  │   no sentry / datadog / pino / winston / otel lib in…  │
+  │   no error-tracking dependency or config declared…    │
   │ ⚠ Database indexes                                     │
   │   100 FK columns · 75 indexes · 25 unindexed           │
   │   → supabase/schema.sql · id → auth                    │
