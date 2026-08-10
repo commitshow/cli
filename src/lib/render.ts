@@ -874,6 +874,10 @@ function vibeChecklistLines(vc: any): Array<{ key: string; status: VibeStatus; l
     const o = vc?.observability
     if (o?.detected) out.push({ key:'observability', status:'pass', label:'Error tracking', detail:o.libs.join(' · ') })
     else if (o && o.checked_sources === 0) out.push({ key:'observability', status:'na', label:'Error tracking', detail:'no manifest or platform config to read' })
+    // Name the logging we did find. A maker with winston and no tracker reads a bare
+    // "nothing declared" as us having missed something, and then stops believing the
+    // rest of the report.
+    else if (o?.logging_libs?.length) out.push({ key:'observability', status:'fail', label:'Error tracking', detail:`structured logging only (${o.logging_libs.join(' · ')}) — no error tracker declared` })
     else out.push({ key:'observability', status:'fail', label:'Error tracking', detail:'no error-tracking dependency or config declared in the public repo' })
   }
   // 6. Rate limiting
