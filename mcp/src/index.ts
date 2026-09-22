@@ -30,11 +30,23 @@
 import { McpServer }              from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport }   from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z }                       from 'zod'
+import { readFileSync }            from 'node:fs'
+import { dirname, join }           from 'node:path'
+import { fileURLToPath }           from 'node:url'
 
 const API_BASE  = process.env.COMMITSHOW_API_BASE  ?? 'https://api.commit.show'
 const DOCS_BASE = process.env.COMMITSHOW_DOCS_BASE ?? 'https://commit.show'
 const LEGIT_API = process.env.LEGIT_SEARCH_API     ?? 'https://legit.show/api/search'
-const VERSION   = '0.2.0'
+// Read from package.json rather than restating it here. `npm version` bumps the manifest
+// and nothing else, so a hardcoded copy goes stale the moment a release happens — 0.2.1
+// shipped announcing itself as 0.2.0, and the version an MCP host displays is the one
+// this line returns.
+const VERSION: string = (() => {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url))
+    return JSON.parse(readFileSync(join(here, '..', 'package.json'), 'utf8')).version as string
+  } catch { return '0.0.0' }   // published builds always have it; never crash over a label
+})()
 
 const server = new McpServer({
   name:    'commitshow',

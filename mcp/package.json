@@ -1,6 +1,6 @@
 {
   "name": "commitshow-mcp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "mcpName": "io.github.commitshow/audit",
   "description": "MCP server for Legit.Show — search launched software by what was measured, not by stars, and score any public GitHub repo. Works in Claude Desktop, Cursor, Cline and Windsurf.",
   "type": "module",
