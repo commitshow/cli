@@ -1,3 +1,18 @@
+> [!IMPORTANT]
+> **This server has been merged into [`commitshow-mcp`](../mcp) and is no longer published.**
+>
+> `commitshow-mcp` carries the same two tools — `search_services` and `fetch_docs`, with
+> identical arguments — and adds `audit_repo` and `project_status`. Two entries under one
+> name, half of them the same, gave anyone browsing the registry no way to tell which to
+> install; there is one now.
+>
+> ```jsonc
+> { "mcpServers": { "legitshow": { "command": "npx", "args": ["-y", "commitshow-mcp@latest"] } } }
+> ```
+>
+> The npm package and the registry entry `io.github.commitshow/legitshow-search` are both
+> marked deprecated. The source stays here as the record of what it was.
+
 <h1 align="center">Legit.Show MCP server</h1>
 
 <p align="center">
