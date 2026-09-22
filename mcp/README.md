@@ -1,7 +1,8 @@
-<h1 align="center">commit.show MCP server</h1>
+<h1 align="center">Legit.Show MCP server</h1>
 
 <p align="center">
-  <strong>Model Context Protocol</strong> server for <strong>Legit.Show</strong> + commit.show.
+  <strong>Model Context Protocol</strong> server for <strong>Legit.Show</strong>.
+  Published on npm as <code>commitshow-mcp</code>, after the audit engine underneath it.
   Plug it into Claude Desktop, Cursor, Cline, Windsurf, or any other MCP host — your
   model can <strong>search the Legit.Show directory of launched software by measured
   production-readiness</strong> and score any public GitHub repo, without ever leaving the chat.

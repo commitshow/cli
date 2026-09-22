@@ -1,8 +1,8 @@
 {
   "name": "commitshow-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "mcpName": "io.github.commitshow/audit",
-  "description": "MCP server for commit.show — let Claude Desktop / Cursor / Cline / Windsurf audit any public GitHub repo through the Model Context Protocol.",
+  "description": "MCP server for Legit.Show — search launched software by what was measured, not by stars, and score any public GitHub repo. Works in Claude Desktop, Cursor, Cline and Windsurf.",
   "type": "module",
   "bin": {
     "commitshow-mcp": "./bin/commitshow-mcp.js"
@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "tsc -p .",
-    "dev":   "tsc -p . --watch",
+    "dev": "tsc -p . --watch",
     "prepare": "npm run build"
   },
   "engines": {
@@ -31,14 +31,19 @@
     "commit.show",
     "audit",
     "vibe-coding",
-    "code-quality"
+    "code-quality",
+    "legit.show",
+    "legitshow",
+    "directory",
+    "production-readiness",
+    "benchmark"
   ],
   "author": "commit.show",
   "license": "MIT",
-  "homepage": "https://commit.show",
+  "homepage": "https://legit.show",
   "repository": {
     "type": "git",
-    "url":  "https://github.com/commitshow/cli",
+    "url": "https://github.com/commitshow/cli",
     "directory": "mcp"
   },
   "bugs": {
@@ -50,6 +55,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.39",
-    "typescript":  "^5.9.3"
+    "typescript": "^5.9.3"
   }
 }
